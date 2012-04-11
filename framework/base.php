@@ -14,6 +14,9 @@ class DKOWPPlugin
     'plugin'  => array('css' => array(), 'js' => array()),
   );
 
+  // data to pass to views
+  public $data = array();
+
   /**
    * constructor
    */
@@ -103,9 +106,12 @@ class DKOWPPlugin
    */
   function render($view) {
     $template_path = $this->plugin_relpath. '/views/ ' . $view . '.php';
-    ob_start();
-    include $template_path;
-    $output = ob_get_clean();
+    $output = '<strong>' . $template_path . ' not found</strong>';
+    if (file_exists($template_path)) {
+      ob_start();
+      include $template_path;
+      $output = ob_get_clean();
+    }
     return $output;
   }
 
