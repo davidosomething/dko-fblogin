@@ -105,7 +105,7 @@ class DKOWPPlugin
    * @param string $view name of template file to load from views folder
    */
   function render($view) {
-    $template_path = $this->plugin_relpath. '/views/ ' . $view . '.php';
+    $template_path = $this->plugin_relpath. '/views/' . $view . '.php';
     $output = '<strong>' . $template_path . ' not found</strong>';
     if (file_exists($template_path)) {
       ob_start();

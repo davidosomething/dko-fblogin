@@ -28,7 +28,6 @@ class DKOFBLogin extends DKOWPPlugin
     parent::__construct(__FILE__);
     register_activation_hook(__FILE__, array(&$this, 'activate'));
     add_action('init', array(&$this, 'initialize'));
-    add_action('plugins_loaded', array(&$this, 'update'));
   }
 
   /**
@@ -43,31 +42,35 @@ class DKOFBLogin extends DKOWPPlugin
   function initialize() {
 
     if (current_user_can('manage_options')) {
-      // admin options page
-      $this->page = $page = add_options_page(
-        __('DKO FB Login Options'),
-        __('DKO FB Login'),
-        'manage_options',
-        self::SLUG,
-        array(&$this, 'admin_page')
-      );
+      // process form here:
+      add_action('load-' . self::SLUG, array(&$this, 'admin_submitted'), 49);
+
+      add_action('admin_menu', array(&$this, 'admin_menu'));
 
       // set help tabs, enqueue scripts&styles here:
-      // add_action("load-$page", array(&$this, 'admin_load'));
-
-      // process form here:
-      add_action("load-$page", array(&$this, 'admin_submitted'), 49);
+      // add_action("load-$this->page", array(&$this, 'admin_load'));
 
       // add things to <head> for options page
-      // add_action("admin_head-$page", array(&$this, 'admin_header'), 51);
+      // add_action("admin_head-$this->page", array(&$this, 'admin_header'), 51);
     }
 
     add_shortcode('dko-fblogin-button', 'render_button');
   }
 
+  function admin_menu() {
+    // admin options page
+    $this->page = add_options_page(
+      __('DKO FB Login Options'),
+      __('DKO FB Login'),
+      'manage_options',
+      self::SLUG,
+      array(&$this, 'admin_page')
+    );
+  }
+
   /* include html for admin options page */
   function admin_page() {
-    $this->render('admin');
+    echo $this->render('admin');
   }
 
   /* process options page form */
