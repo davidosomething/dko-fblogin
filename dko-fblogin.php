@@ -13,6 +13,7 @@
  * http://www.facebook.com/ottopress
  *
  *
+ * @TODO: check for curl
  * @TODO: check for stream wrappers:
 
 $w = stream_get_wrappers();

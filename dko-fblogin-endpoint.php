@@ -1,11 +1,11 @@
 <?php
 define('WP_USE_THEMES', false);
-require_once '../wp-blog-header.php';
-require_once dirname(__FILE__) . '/dko-fblogin-settings.php';
+// assume in wp-content/plugins/dko-fblogin/
+require_once '../../../wp-blog-header.php';
+
+require_once 'dko-fblogin-settings.php';
 
 if (!array_key_exists('state', $_REQUEST) || !array_key_exists('dko_fblogin_state', $_SESSION)) {
-  die();
-  header('location: ' . home_url());
 }
 
 if ($_REQUEST['state'] == $_SESSION['dko_fblogin_state']) {
@@ -15,57 +15,37 @@ if ($_REQUEST['state'] == $_SESSION['dko_fblogin_state']) {
     . '&redirect_uri=' . urlencode(DKOFBLOGIN_ENDPOINT)
     . '&client_secret=' . $options['app_secret']
     . '&code=' . $_REQUEST['code'];
+  $ch = curl_init($token_url);
+  curl_setopt_array($ch, $dko_fblogin_http_settings);
+  $result = curl_exec($ch);
+  if (curl_errno($ch) == 60) { // CURLE_SSL_CACERT
+    // Invalid or no certificate authority found, using bundled information
+    curl_setopt_array($ch, $dko_fblogin_http_settings);
+    curl_setopt($ch, CURLOPT_CAINFO, dirname(__FILE__) . '/fb_ca_chain_bundle.crt');
+    $result = curl_exec($ch);
 
-  echo '<pre>';
-  $response = file_get_contents($token_url);
-  print_r($response);
-  echo '</pre>';
-
-  exit();
-  $response = wp_remote_get($token_url, $dko_fblogin_http_settings);
-
-  if (is_wp_error($response)) {
-    echo '<h3>error: ', $response->get_error_code(), '</h3>';
-    echo '<p>', $response->get_error_message(), '</p>';
-    echo '<pre>'; print_r($response->get_error_data()); echo '</pre>';
-    exit;
-  }
-  elseif (200 == wp_remote_retrieve_response_code($response)) {
-    $body = wp_remote_retrieve_body($response);
-    print_r($response);
-    print_r($body);
-    //str_replace('access_token=', '', $response['body']);
   }
 
-  /*
-  $type = strtoupper($type);
-  if (empty($obj)) return null;
-  $url = 'https://graph.facebook.com/'. $obj;
-  if (!empty($connection)) $url .= '/'.$connection;
-  if ($type == 'GET') $url .= '?'.http_build_query($args);
-  $args['sslverify']=0;
-
-  if ($type == 'POST') {
-    $data = wp_remote_post($url, $args);
-  } else if ($type == 'GET') {
-    $data = wp_remote_get($url, $args);
-  } 
-  
-  if ($data && !is_wp_error($data)) {
-    $resp = json_decode($data['body'],true);
-    return $resp;
+  if (!curl_errno($ch)) {
+    $access_token = str_replace('access_token=', '', $result);
   }
-  
-  return false;
 
-/*  $graph_url = "https://graph.facebook.com/me?access_token=" . $params['access_token'];
+  echo "<pre>Token urL:\n";
+  print_r($token_url);
+  echo "\n\nerror:\n";
+  echo curl_error($ch);
+  echo "\n\nresult:\n";
+  print_r($result);
+  curl_close($ch);
 
-  $user = json_decode(file_get_contents($graph_url));
-  echo("Hello " . $user->name);
- */
+  if (isset($access_token)) {
+    $graph_url = 'https://graph.facebook.com/me?access_token=' . $access_token;
+    $ch = curl_init($graph_url);
+    curl_setopt_array($ch, $dko_fblogin_http_settings);
+    $result = curl_exec($ch);
+    echo "<pre>";
+    print_r($result);
+    echo "\n";
+    print_r(json_decode($result));
+  }
 }
-else {
-  echo("The state does not match. You may be a victim of CSRF.");
-}
-
- ?>
