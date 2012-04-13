@@ -1,10 +1,6 @@
 <?php
 class DKOWPPlugin
 {
-  protected $plugin_folder = '';
-  protected $plugin_relpath = '';
-  protected $plugin_abspath = '';
-
   protected $paths = array(
     'css' => 'css',
     'js'  => 'js'
@@ -17,6 +13,10 @@ class DKOWPPlugin
   // data to pass to views
   public $data = array();
 
+  protected $plugin_dirpath = '';
+  protected $plugin_relpath = '';
+  protected $plugin_abspath = '';
+
   /**
    * constructor
    */
@@ -25,12 +25,10 @@ class DKOWPPlugin
     $this->add_ajax_actions();
     $this->wpdb = $wpdb;
 
-    /* set plugin paths */
     $this->plugin_folder = basename(dirname($childfile));
-    if (empty($this->plugin_relpath)) {
-      $this->plugin_relpath = WP_PLUGIN_DIR . '/' . $this->plugin_folder;
-    }
-    $this->plugin_abspath = WP_PLUGIN_URL . '/' . $this->plugin_folder;
+    $this->plugin_dirpath = plugin_dir_path(__FILE__);
+    $this->plugin_relpath = WP_PLUGIN_DIR . '/' . $this->plugin_folder;
+    $this->plugin_abspath = plugin_dir_url(__FILE__);
     $this->paths['css'] = $this->plugin_abspath . '/css/';
     $this->paths['js']  = $this->plugin_abspath . '/js/';
 
@@ -105,7 +103,7 @@ class DKOWPPlugin
    * @param string $view name of template file to load from views folder
    */
   function render($view) {
-    $template_path = $this->plugin_relpath. '/views/' . $view . '.php';
+    $template_path = $this->plugin_relpath . '/views/' . $view . '.php';
     $output = '<strong>' . $template_path . ' not found</strong>';
     if (file_exists($template_path)) {
       ob_start();

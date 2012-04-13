@@ -38,8 +38,11 @@ The plugin will create the appropriate tables.
 Usage
 -----
 
-This plugin provides a shortcode to add the login button somewhere: ```` [dko-fblogin-button] ````
-You can use the ```` do_shortcode() ```` function to output the button programmatically.
+This plugin provides a shortcode to add the login button anywhere shortcodes
+work: ```` [dko-fblogin-button] ````
+If you want to use the button outside of a post field (e.g. in your theme) you
+can use the helper function: ```` dko_fblogin_button() ````
+That function just echoes out ```` do_shortcode('[dko-fblogin-button]') ````
 
 
 Developer Notes

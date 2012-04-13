@@ -12,45 +12,63 @@
  * Loosely adapted from Otto42's Simple Facebook Connect
  * http://www.facebook.com/ottopress
  *
+ *
+ * @TODO: check for stream wrappers:
+
+$w = stream_get_wrappers();
+echo 'openssl: ',  extension_loaded  ('openssl') ? 'yes':'no', "\n";
+echo 'http wrapper: ', in_array('http', $w) ? 'yes':'no', "\n";
+echo 'https wrapper: ', in_array('https', $w) ? 'yes':'no', "\n";
+echo 'wrappers: ', var_dump($w);
+echo "\n";
+
  */
 
-$plugin_path = dirname(__FILE__) . '/';
+require_once dirname(__FILE__) . '/dko-fblogin-settings.php';
 if (!class_exists('DKOWPPluginFramework')) {
-  require_once($plugin_path . 'framework/base.php');
+  require_once dirname(__FILE__) . '/framework/base.php';
 }
 
 class DKOFBLogin extends DKOWPPlugin
 {
-  const NAME = 'DKO FB Login';
-  const SLUG = 'dkofblogin';
-
+  const NAME            = 'DKO FB Login';
   const PLUGIN_VERSION  = '1.0';
 
-  private $options_key;
+  private $options      = array();
+  private $options_key  = '';
 
   /**
    * run every time plugin loaded
    */
   function __construct() {
     parent::__construct(__FILE__);
-
-    $this->options_key = self::SLUG.'_options';
-
     register_activation_hook(__FILE__, array(&$this, 'activate'));
+    register_deactivation_hook(__FILE__, array(&$this, 'deactivate'));
     add_action('init', array(&$this, 'initialize'));
     add_action('init', array(&$this, 'html_channel_file'));
   }
 
-  /**
-   * run when plugin first activated
-   */
   function activate() {
+    add_rewrite_rule('register/?', substr($this->plugin_relpath, 1) . '/dko-fblogin-endpoint.php', 'top');
+    flush_rewrite_rules();
+  }
+
+  function deactivate() {
+    flush_rewrite_rules();
   }
 
   /**
    * run during WP initialize - no output plz
    */
   function initialize() {
+    // setup plugin options
+    $this->options_key = DKOFBLOGIN_SLUG.'_options';
+    if (get_option($this->options_key) === FALSE) {
+      add_option($this->options_key);
+    }
+    $this->options = get_option($this->options_key);
+
+    // hook settings pages
     if (current_user_can('manage_options')) {
       add_action('admin_menu', array(&$this, 'admin_menu'));
       add_action('admin_init', array(&$this, 'admin_init'));
@@ -60,11 +78,17 @@ class DKOFBLogin extends DKOWPPlugin
       // add_action("admin_head-$this->page", array(&$this, 'admin_header'), 51);
     }
 
-    add_shortcode('dko-fblogin-button', 'render_button');
+    // hook for shortcode
+    add_shortcode('dko-fblogin-button', array(&$this, 'shortcode'));
 
+    // hooks for site
     if (!is_admin()) {
-      add_filter('language_attributes', array(&$this, 'html_language_attributes'));
-      add_action('wp_footer', array(&$this, 'html_fbjs', 20));
+      session_start();
+      if (empty($_REQUEST['code'])) { // don't generate new session state if have code
+        $_SESSION['dko_fblogin_state'] = md5(uniqid(rand(), TRUE)); //CSRF protection
+      }
+      add_filter('language_attributes', array(&$this, 'html_fb_language_attributes'));
+      add_action('wp_footer', array(&$this, 'html_fbjs'), 20);
     }
   }
 
@@ -75,7 +99,7 @@ class DKOFBLogin extends DKOWPPlugin
       __(self::NAME . ' Options'),
       __(self::NAME),
       'manage_options',
-      self::SLUG,
+      DKOFBLOGIN_SLUG,
       array(&$this, 'admin_page')
     );
   }
@@ -87,35 +111,31 @@ class DKOFBLogin extends DKOWPPlugin
 
   /* set up options and populate admin menu */
   function admin_init() {
-    if (get_option($this->options_key) === FALSE) {
-      add_option($this->options_key);
-    }
-
     // create a new section on the page
+    $section_slug = DKOFBLOGIN_SLUG.'_api';
     add_settings_section(
-      self::SLUG.'_api',                  // slug of the SECTION
-      'Facebook API Settings',            // Title of this section
+      $section_slug,
+      'Facebook API Settings',
       array(&$this, 'html_api_section_header'),
-      self::SLUG                          // slug of the PAGE
+      DKOFBLOGIN_SLUG                          // slug of the PAGE
     );
 
     // begin adding fields
     add_settings_field(
-      'api_id',                           // ID used to identify the field throughout the theme
-      'API ID',                           // The label to the left of the option interface element
+      'app_id',                           // ID used to identify the field throughout the theme
+      'APP ID',                           // The label to the left of the option interface element
       array(&$this, 'html_field_api'),    // html callback to render field
-      self::SLUG,                         // page name
-      self::SLUG.'_api',                  // section name
-      array('field' => 'api_id')          // pass whatever you want to the html_callback function (arg[3])
+      DKOFBLOGIN_SLUG,                         // page name
+      $section_slug,                      // section name
+      array('field' => 'app_id')          // pass whatever you want to the html_callback function (arg[3])
     );
-    // begin adding fields
     add_settings_field(
-      'api_secret',                       // ID used to identify the field throughout the theme
-      'API Secret',                       // The label to the left of the option interface element
-      array(&$this, 'html_field_api'),    // html callback to render field
-      self::SLUG,                         // page name
-      self::SLUG.'_api',                  // section name
-      array('field' => 'api_secret')      // pass whatever you want to the html_callback function (arg[3])
+      'app_secret',
+      'APP Secret',
+      array(&$this, 'html_field_api'),
+      DKOFBLOGIN_SLUG,
+      $section_slug,
+      array('field' => 'app_secret')
     );
 
     // make sure WP knows to save our options
@@ -132,7 +152,7 @@ class DKOFBLogin extends DKOWPPlugin
 
   function html_field_api($args) {
     $options = get_option($this->options_key);
-    $field_id = self::SLUG . '-' . $args['field'];
+    $field_id = DKOFBLOGIN_SLUG . '-' . $args['field'];
     $field_name = $this->options_key . '[' . $args['field'] . ']';
     $field_value = isset($options[$args['field']]) ? $options[$args['field']] : '';
     echo '<input id="', $field_id, '" type="text" name="', $field_name, '" value="', $field_value, '" />';
@@ -163,45 +183,61 @@ class DKOFBLogin extends DKOWPPlugin
     return apply_filters('sanitize_api_field', $output, $input);
   }
 
-  function render_button($atts) {
+  function shortcode($atts) {
+    $options = get_option($this->options_key);
+    $html = '<a class="dko-fblogin-button" href="https://www.facebook.com/dialog/oauth?client_id='.$options['app_id'];
+    if (array_key_exists('scope', $options)) {
+      $html .= '&amp;scope=' . implode(',', $options['scope']);
+    }
+    $html .= '&amp;redirect_uri=' . urlencode(DKOFBLOGIN_ENDPOINT);
+    $html .= '&amp;state=' . $_SESSION['dko_fblogin_state'];
+    $html .= '">Login through facebook</a>';
+    return $html;
+  }
+
+  function html_social_plugin_login_button() {
     // Extract the attributes
     extract(shortcode_atts(array(
-      'attr1' => 'foo', //foo is a default value
-      'attr2' => 'bar'
-      ), $atts));
-    // you can now access the attribute values using $attr1 and $attr2
+      'show_faces'        => 'false',
+      'max_rows'          => '1',
+      'width'             => '200'//,
+      //'registration_url'  => //$this->endpoint
+    ), $atts));
+    $html = '<div class="fb-login-button" data-show-faces="' . $show_faces . '" data-max-rows="' . $max_rows . '" data-width="' . $width . '" ';
+    if (isset($registration_url)) {
+      $html .= 'data-registration-url="' . $registration_url . '"';
+    }
+    $html .= '></div>';
+    return $html;
   }
 
   // fix up the html tag to have the FBML extensions
-  function html_language_attributes($lang) {
+  function html_fb_language_attributes($lang) {
     return ' xmlns:fb="http://ogp.me/ns/fb#" xmlns:og="http://ogp.me/ns#" '.$lang;
   }
 
-  function html_fbjs() {
+  function html_fbjs($args = array()) {
     $options = get_option($this->options_key);
     $defaults = array(
-      'appId'       => $options['api_id'],
+      'appId'       => $options['app_id'],
       'channelUrl'  => home_url('?fbchannel=1'),
       'status'      => true,
       'cookie'      => true,
-      'xfbml'       => true,
-      'oauth'       => true,
+      'xfbml'       => true
     );
     $args = wp_parse_args($args, $defaults);
     ?>
-    <div id="fb-root"></div>
-    <script>
+    <div id="fb-root"></div><script>
       window.fbAsyncInit = function() {
         FB.init(<?php echo json_encode($args); ?>);
       };
-      (function(d){
-        var js, id = 'facebook-jssdk', ref = d.getElementsByTagName('script')[0];
-        if (d.getElementById(id)) {return;}
-        js = d.createElement('script'); js.id = id; js.async = true;
-        js.src = "//connect.facebook.net/en_US/all.js";
-        ref.parentNode.insertBefore(js, ref);
-      }(document));
-    </script>
+      (function(d, s, id){
+        var js, fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) return;
+        js = d.createElement(s); js.id = id; js.async = true;
+        js.src = "//connect.facebook.net/en_US/all.js#xfbml=1&amp;appId=<?php echo $defaults['appId']; ?>"
+        fjs.parentNode.insertBefore(js, fjs);
+      }(document, 'script', 'facebook-jssdk'));</script>
     <?php
   } // html_fbjs()
 
@@ -219,3 +255,10 @@ class DKOFBLogin extends DKOWPPlugin
 } // end of class
 
 $DKOFBLogin = new DKOFBLogin();
+
+/**
+ * provide helper function to render the button
+ */
+function dko_fblogin_button() {
+  echo do_shortcode('[dko-fblogin-button]');
+}
