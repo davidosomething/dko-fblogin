@@ -49,7 +49,7 @@ class DKOFBLogin extends DKOWPPlugin
   }
 
   function activate() {
-    add_rewrite_rule('register/?', substr($this->plugin_relpath, 1) . '/dko-fblogin-endpoint.php', 'top');
+    add_rewrite_rule('register/?', 'wp-content/plugins/dko-fblogin/dko-fblogin-endpoint.php', 'top');
     flush_rewrite_rules();
   }
 

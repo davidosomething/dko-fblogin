@@ -1,6 +1,6 @@
 <?php
 define('WP_USE_THEMES', false);
-require_once $_SERVER['DOCUMENT_ROOT'] . '/wp-blog-header.php';
+require_once '../wp-blog-header.php';
 require_once dirname(__FILE__) . '/dko-fblogin-settings.php';
 
 if (!array_key_exists('state', $_REQUEST) || !array_key_exists('dko_fblogin_state', $_SESSION)) {
