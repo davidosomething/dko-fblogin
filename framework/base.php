@@ -26,9 +26,9 @@ class DKOWPPlugin
     $this->wpdb = $wpdb;
 
     $this->plugin_folder = basename(dirname($childfile));
-    $this->plugin_dirpath = plugin_dir_path(__FILE__);
+    $this->plugin_dirpath = plugin_dir_path($childfile);
     $this->plugin_relpath = WP_PLUGIN_DIR . '/' . $this->plugin_folder;
-    $this->plugin_abspath = plugin_dir_url(__FILE__);
+    $this->plugin_abspath = plugin_dir_url($childfile);
     $this->paths['css'] = $this->plugin_abspath . '/css/';
     $this->paths['js']  = $this->plugin_abspath . '/js/';
 
