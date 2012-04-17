@@ -1,6 +1,40 @@
+#dkofblogin {
+}
+  #dkofblogin p {
+    max-width: 600px;
+  }
+
+  #dkofblogin input[type="text"] {
+    margin-right: 0.5em;
+  }
+
 .dkofblogin-permission {
   float: left;
   padding: 0.5em;
   width: 16em;
 }
 
+
+/* ==|== Profile Edit Page ================================================== */
+#dkofblogin-associated-profile {
+  border: 1px #999 solid;
+  display: inline-block;
+  overflow: hidden;
+  padding: 1em;
+}
+  #dkofblogin-associated-profile img {
+    float: left;
+    margin-right: 1em;
+  }
+  #dkofblogin-associated-profile span {
+    float: left;
+    line-height: 50px;
+    margin: 0;
+    white-space: nowrap;
+  }
+#dko-fblogin-deauthorize-link {
+  clear: left;
+  display: inline-block;
+  margin: 0.5em;
+  padding: 0.5em;
+}

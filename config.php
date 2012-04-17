@@ -11,7 +11,7 @@ define('DKOFBLOGIN_USERMETA_KEY_FBID',  DKOFBLOGIN_SLUG . '_fbid');
 define('DKOFBLOGIN_USERMETA_KEY_TOKEN', DKOFBLOGIN_SLUG . '_token');
 
 if (!defined('SERVER_ENVIRONMENT') || SERVER_ENVIRONMENT == 'PROD') {
-  $dko_fblogin_http_settings = array(
+  $dkofblogin_http_settings = array(
     CURLOPT_SSL_VERIFYHOST => true,
     CURLOPT_SSL_VERIFYPEER => true,
     CURLOPT_RETURNTRANSFER => true,
@@ -19,7 +19,7 @@ if (!defined('SERVER_ENVIRONMENT') || SERVER_ENVIRONMENT == 'PROD') {
   );
 }
 else { // local or dev
-  $dko_fblogin_http_settings = array(
+  $dkofblogin_http_settings = array(
     CURLOPT_SSL_VERIFYHOST  => false,
     CURLOPT_SSL_VERIFYPEER  => false,
     CURLOPT_RETURNTRANSFER  => true,
@@ -29,7 +29,7 @@ else { // local or dev
 }
 
 // comes from here: https://developers.facebook.com/docs/authentication/permissions/
-$dko_fblogin_permissions = array(
+$dkofblogin_permissions = array(
   'user_about_me',
   'user_activities',
   'user_birthday',

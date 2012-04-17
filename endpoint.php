@@ -11,14 +11,14 @@ require_once 'config.php';
 require_once 'fbapi.php';
 
 /* ==|== no haxors ========================================================== */
-if (!array_key_exists('state', $_REQUEST) || !array_key_exists('dko_fblogin_state', $_SESSION)) {
-  echo 'Missing state, maybe CSRF';
-  exit;
+if (array_key_exists('error_msg', $_REQUEST)) {
+  throw new Exception(htmlspecialchars($_REQUEST['error_msg']));
 }
-
+if (!array_key_exists('state', $_REQUEST) || !array_key_exists('dko_fblogin_state', $_SESSION)) {
+  throw new Exception('Missing state, maybe CSRF');
+}
 if ($_REQUEST['state'] != $_SESSION['dko_fblogin_state']) {
-  echo 'Invalid state, maybe CSRF';
-  exit;
+  throw new Exception('Invalid state, maybe CSRF');
 }
 
 /**
@@ -60,6 +60,7 @@ function dkofblogin_redirect($location = '', $default = '', $status = 302) {
  * @TODO this could take a while, consider another method
  */
 function dkofblogin_createusername($username, $prefix = '') {
+  $username = preg_replace("/[^0-9a-zA-Z ]/m", '', $username);
   $attempt = $username . $prefix;
   $taken = get_user_by('login', $attempt);
   if (!$taken) {
@@ -72,39 +73,17 @@ function dkofblogin_createusername($username, $prefix = '') {
   return dkofblogin_createusername($username, $prefix);
 }
 
-
 /* ==|== Get an access token ================================================ */
 $options = get_option(DKOFBLOGIN_SLUG . '_options');
-$token_url = 'https://graph.facebook.com/oauth/access_token?'
-  . 'client_id=' . $options['app_id']
-  . '&redirect_uri=' . urlencode(DKOFBLOGIN_ENDPOINT)
-  . '&client_secret=' . $options['app_secret']
-  . '&code=' . $_REQUEST['code'];
-$ch = curl_init($token_url);
-curl_setopt_array($ch, $dko_fblogin_http_settings);
-$result = curl_exec($ch);
-if (curl_errno($ch) == 60) { // CURLE_SSL_CACERT
-  // Invalid or no certificate authority found, using bundled information
-  curl_setopt_array($ch, $dko_fblogin_http_settings);
-  curl_setopt($ch, CURLOPT_CAINFO, dirname(__FILE__) . '/fb_ca_chain_bundle.crt');
-  $result = curl_exec($ch);
-}
-
-if (curl_errno($ch)) {
-  print_r( curl_error($ch) );
-  exit;
-}
-else {
-  $access_token = str_replace('access_token=', '', $result);
-}
-curl_close($ch);
-
-$fb_data = dkofblogin_get_fb_userdata($access_token);
+$access_token = dkofblogin_get_access_token();
 
 /* ==|== Look for existing user by fb id ==================================== */
-if (!isset($fb_data)) { // got access token
-  echo 'Error parsing fb user data';
-  exit;
+$fb_data = false;
+if ($access_token) {
+  $fb_data = dkofblogin_get_fb_userdata($access_token);
+}
+if (!$fb_data) { // got access token
+  throw new Exception('Couldn\'t get or parse user data.');
 }
 
 $user_query = new WP_User_Query(array(
@@ -130,20 +109,40 @@ if (!$user_query->total_users) { // user doesn't exist
   }
   else { // not logged in, doesn't exist, so create new WP account
     $wp_userdata = array();
-    $wp_userdata['user_login'] = dkofblogin_createusername($fb_data->username);
+    if (property_exists($fb_data, 'username')) {
+      $wp_userdata['user_login'] = dkofblogin_createusername($fb_data->username);
+    }
+    else {
+      $emailname = strstr($fb_data->email, '@', true);
+      $wp_userdata['user_login'] = dkofblogin_createusername($emailname);
+    }
+    $wp_userdata['user_pass'] = wp_generate_password();
     $wp_userdata['user_email'] = $fb_data->email;
     $wp_userdata['first_name'] = $fb_data->first_name;
     $wp_userdata['last_name'] = $fb_data->last_name;
-    $user_id = wp_create_user($wp_userdata);
+    $user_id = wp_insert_user($wp_userdata);
+
+    $message = 'Hi ' . $fb_data->name . ",\n\n";
+    $message .= 'You logged in via Facebook on ' . bloginfo('name');
+    $message .= "so we created an account for you. Keep this email for";
+    $message .= "reference. You can always login via your linked Facebook";
+    $message .= "account or use the following username and password:\n";
+    $message .= "\n  username: " . $wp_userdata['user_login'];
+    $message .= "\n  password: " . $wp_userdata['user_pass'] . "\n\n";
+    wp_mail($fb_data->email, '[Account Created]', $message);
+
     $user_data = get_userdata($user_id);
     dkofblogin_login($user_data); // log in
     dkofblogin_setfbmeta($user_id, $fb_data->id, $access_token);
-    dkofblogin_redirect($options['register_redirect'], admin_url('profile.php')); // collect missing info
+    dkofblogin_redirect($options['register_redirect'], admin_url('profile.php'));
   }
 }
 else { // fb id already associated with an account, log WP user in
   $user_data = $user_query->results[0];
   dkofblogin_login($user_data);
+  dkofblogin_setfbmeta($user_data->ID, $fb_data->id, $access_token); // update token all the time
   dkofblogin_redirect($options['login_redirect'], admin_url('profile.php'));
 }
-exit;
+
+// 403 unauthorized, shouldn't ever get to this point
+header('location: ' . site_url(), true, 403); exit;
