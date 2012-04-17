@@ -7,6 +7,8 @@
 define('DKOFBLOGIN_SLUG',           'dkofblogin');
 define('DKOFBLOGIN_ENDPOINT_SLUG',  'dko-fblogin-endpoint');
 define('DKOFBLOGIN_ENDPOINT',       site_url('/' . DKOFBLOGIN_ENDPOINT_SLUG));
+define('DKOFBLOGIN_USERMETA_KEY_FBID',  DKOFBLOGIN_SLUG . '_fbid');
+define('DKOFBLOGIN_USERMETA_KEY_TOKEN', DKOFBLOGIN_SLUG . '_token');
 
 if (!defined('SERVER_ENVIRONMENT') || SERVER_ENVIRONMENT == 'PROD') {
   $dko_fblogin_http_settings = array(

@@ -26,6 +26,7 @@ echo "\n";
  */
 
 require_once dirname(__FILE__) . '/config.php';
+require_once dirname(__FILE__) . '/fbapi.php';
 if (!class_exists('DKOWPPluginFramework')) {
   require_once dirname(__FILE__) . '/framework/base.php';
 }
@@ -70,17 +71,15 @@ class DKOFBLogin extends DKOWPPlugin
     }
     $this->options = get_option($this->options_key);
 
-    // hook settings pages
-    if (current_user_can('manage_options')) {
-      add_action('admin_menu', array(&$this, 'admin_menu'));
-      add_action('admin_init', array(&$this, 'admin_init'));
+    if (is_admin()) { // hook settings pages
+      add_action('show_user_profile', array(&$this, 'user_profile_fields'), 10);
+      add_action('edit_user_profile', array(&$this, 'user_profile_fields'), 10);
+      if (current_user_can('manage_options')) {
+        add_action('admin_menu', array(&$this, 'admin_menu'));
+        add_action('admin_init', array(&$this, 'admin_init'));
+      }
     }
-
-    // hook for shortcode
-    add_shortcode('dko-fblogin-button', array(&$this, 'shortcode'));
-
-    // hooks for site
-    if (!is_admin()) {
+    else { // hooks for site
       session_start();
       if (empty($_REQUEST['code'])) { // don't generate new session state if have code
         $_SESSION['dko_fblogin_state'] = md5(uniqid(rand(), TRUE)); //CSRF protection
@@ -88,6 +87,17 @@ class DKOFBLogin extends DKOWPPlugin
       add_filter('language_attributes', array(&$this, 'html_fb_language_attributes'));
       add_action('wp_footer', array(&$this, 'html_fbjs'), 20);
     }
+
+    // hook for shortcode
+    add_shortcode('dko-fblogin-button', array(&$this, 'shortcode'));
+  }
+
+  /* show fb info on profile edit page */
+  function user_profile_fields($user) {
+    // @TODO don't assume access_token is valid
+    $access_token = get_the_author_meta(DKOFBLOGIN_USERMETA_KEY_TOKEN, $user->ID);
+    $fb_data = dkofblogin_get_fb_userdata($access_token);
+    echo $this->render('admin-profile', $fb_data);
   }
 
   /* create admin menu item */
@@ -124,22 +134,14 @@ class DKOFBLogin extends DKOWPPlugin
     );
 
     // begin adding fields
-    add_settings_field(
-      'app_id',                           // ID used to identify the field throughout the theme
-      'App ID/key',                       // The label to the left of the option interface element
-      array(&$this, 'html_field_api'),    // html callback to render field
-      DKOFBLOGIN_SLUG,                    // page name
-      $section_slug,                      // section name
-      array('field' => 'app_id')          // pass whatever you want to the html_callback function (arg[3])
-    );
-    add_settings_field(
-      'app_secret', 'App Secret', array(&$this, 'html_field_api'),
-      DKOFBLOGIN_SLUG, $section_slug, array('field' => 'app_secret')
-    );
+    $this->add_settings_textfield($section_slug, 'App ID');
+    $this->add_settings_textfield($section_slug, 'App Secret');
     add_settings_field(
       'permissions', 'Permissions', array(&$this, 'html_field_permissions'),
       DKOFBLOGIN_SLUG, $section_slug, array('field' => 'permissions')
     );
+    $this->add_settings_textfield($section_slug, 'Login Redirect');
+    $this->add_settings_textfield($section_slug, 'Register Redirect');
 
     // make sure WP knows to save our options
     register_setting(
@@ -149,16 +151,24 @@ class DKOFBLogin extends DKOWPPlugin
     );
   } // admin_init()
 
+  function add_settings_textfield($section_slug, $field_name) {
+    $field_slug = strtolower(str_replace(' ', '_', $field_name));
+    add_settings_field(
+      $field_slug, $field_name, array(&$this, 'html_textfield'),
+      DKOFBLOGIN_SLUG, $section_slug, array('field' => $field_slug)
+    );
+  }
+
   function html_section_header_api($args) {
     echo '<p>Get this stuff from your facebook application\'s settings page.</p>';
   }
 
-  function html_field_api($args) {
+  function html_textfield($args) {
     $options = get_option($this->options_key);
     $field_id = DKOFBLOGIN_SLUG . '-' . $args['field'];
     $field_name = $this->options_key . '[' . $args['field'] . ']';
     $field_value = isset($options[$args['field']]) ? $options[$args['field']] : '';
-    echo '<input id="', $field_id, '" type="text" name="', $field_name, '" value="', $field_value, '" />';
+    echo '<input id="', $field_id, '" type="text" name="', $field_name, '" value="', $field_value, '" size="40" />';
   }
 
   function html_field_permissions($args) {
@@ -276,9 +286,7 @@ STREAM;
       'xfbml'       => true
     );
     $args = wp_parse_args($args, $defaults);
-
-    $this->data = array('args' => $args);
-    echo $this->render('fbjs', $this->data);
+    echo $this->render('fbjs', $args);
   } // html_fbjs()
 
   /**

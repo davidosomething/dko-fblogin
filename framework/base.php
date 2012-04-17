@@ -10,9 +10,6 @@ class DKOWPPlugin
     'plugin'  => array('css' => array(), 'js' => array()),
   );
 
-  // data to pass to views
-  public $data = array();
-
   protected $plugin_dirpath = '';
   protected $plugin_relpath = '';
   protected $plugin_abspath = '';
@@ -102,7 +99,7 @@ class DKOWPPlugin
   /**
    * @param string $view name of template file to load from views folder
    */
-  function render($view) {
+  function render($view, $data = array()) {
     $template_path = $this->plugin_relpath . '/views/' . $view . '.php';
     $output = '<strong>' . $template_path . ' not found</strong>';
     if (file_exists($template_path)) {
