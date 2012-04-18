@@ -13,7 +13,7 @@
     <label for="dkofblogin-deauthorize-url">Deauthorize Callback:</label>
   </th>
   <td>
-    <input id="dkofblogin-deauthorize-url" type="text" value="<?php echo home_url('/dko-fblogin-deauthorize'); ?>" size="64" onclick="this.select();" /> (copy this, don't edit)
+    <input id="dkofblogin-deauthorize-url" type="text" value="<?php echo DKOFBLOGIN_DEAUTHORIZE_URL; ?>" size="56" onclick="this.select();" /> (copy this, don't edit)
   </td>
 </table>
 

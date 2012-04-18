@@ -1,5 +1,4 @@
-#dkofblogin {
-}
+#dkofblogin { }
   #dkofblogin p {
     max-width: 600px;
   }
@@ -20,7 +19,9 @@
   border: 1px #999 solid;
   display: inline-block;
   overflow: hidden;
+  margin-right: 1em;
   padding: 1em;
+  vertical-align: middle;
 }
   #dkofblogin-associated-profile img {
     float: left;
@@ -32,9 +33,10 @@
     margin: 0;
     white-space: nowrap;
   }
-#dko-fblogin-deauthorize-link {
-  clear: left;
+#dkofblogin-unlink-link {
   display: inline-block;
-  margin: 0.5em;
-  padding: 0.5em;
+  vertical-align: middle;
+}
+#dkofblogin-deauthorize-link {
+  display: inline-block;
 }

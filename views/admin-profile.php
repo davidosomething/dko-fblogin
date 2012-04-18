@@ -19,11 +19,17 @@ if ($data && !property_exists($data, 'error')) {
       else:
         ?>
         <a id="dkofblogin-associated-profile" href="https://graph.facebook.com/<?php echo $identifier; ?>" target="_blank">
-          <img src="https://graph.facebook.com/<?php echo $identifier; ?>/picture"
-            alt="<?php echo $identifier; ?>" />
+          <img src="https://graph.facebook.com/<?php echo $identifier; ?>/picture" alt="<?php echo $identifier; ?>" />
           <span><?php echo $data->name; ?> (<?php echo $identifier; ?>)</span>
         </a>
-        <a id="dko-fblogin-deauthorize-link" target="_blank" href="https://www.facebook.com/settings?tab=applications">Click here to go to the App Settings page on facebook if you want to deauthorize this app.</a>
+        <a id="dkofblogin-unlink-link" href="<?php echo DKOFBLOGIN_DEAUTHORIZE_URL; ?>">Forget this account</a>
+        <p><strong>Note:</strong> Even if you forget this account, this site
+          still has access to your facebook information.
+          <a id="dkofblogin-deauthorize-link" target="_blank"
+            href="https://www.facebook.com/settings?tab=applications">Click
+            here to go to the App Settings page on facebook if you want to
+            deauthorize this app completely.</a>
+        </p>
         <?php
       endif;
     ?></td>

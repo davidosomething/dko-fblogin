@@ -4,9 +4,14 @@
  * make sure WordPress is loaded before requiring this file!
  */
 
-define('DKOFBLOGIN_SLUG',           'dkofblogin');
-define('DKOFBLOGIN_ENDPOINT_SLUG',  'dko-fblogin-endpoint');
-define('DKOFBLOGIN_ENDPOINT',       site_url('/' . DKOFBLOGIN_ENDPOINT_SLUG));
+define('DKOFBLOGIN_PLUGIN_NAME',        'DKO FB Login');
+define('DKOFBLOGIN_PLUGIN_VERSION',     '1.3');
+define('DKOFBLOGIN_SLUG',               'dkofblogin');
+define('DKOFBLOGIN_ENDPOINT_SLUG',      DKOFBLOGIN_SLUG . '-endpoint');
+define('DKOFBLOGIN_ENDPOINT_URL',       site_url('/' . DKOFBLOGIN_ENDPOINT_SLUG));
+define('DKOFBLOGIN_DEAUTHORIZE_SLUG',   DKOFBLOGIN_SLUG . '-deauthorize');
+define('DKOFBLOGIN_DEAUTHORIZE_URL',    site_url('/' . DKOFBLOGIN_DEAUTHORIZE_SLUG));
+define('DKOFBLOGIN_OPTIONS_KEY',        DKOFBLOGIN_SLUG . '_options');
 define('DKOFBLOGIN_USERMETA_KEY_FBID',  DKOFBLOGIN_SLUG . '_fbid');
 define('DKOFBLOGIN_USERMETA_KEY_TOKEN', DKOFBLOGIN_SLUG . '_token');
 
@@ -27,45 +32,3 @@ else { // local or dev
     CURLOPT_VERBOSE         => 1
   );
 }
-
-// comes from here: https://developers.facebook.com/docs/authentication/permissions/
-$dkofblogin_permissions = array(
-  'user_about_me',
-  'user_activities',
-  'user_birthday',
-  'user_checkins',
-  'user_education_history',
-  'user_events',
-  'user_groups',
-  'user_hometown',
-  'user_interests',
-  'user_likes',
-  'user_location',
-  'user_notes',
-  'user_photos',
-  'user_questions',
-  'user_relationships',
-  'user_relationship_details',
-  'user_religion_politics',
-  'user_status',
-  'user_videos',
-  'user_website',
-  'user_work_history',
-  'email',
-  'read_friendlists',
-  'read_insights',
-  'read_mailbox',
-  'read_requests',
-  'read_stream',
-  'xmpp_login',
-  'ads_management',
-  'create_event',
-  'manage_friendlists',
-  'manage_notifications',
-  'user_online_presence',
-  'friends_online_presence',
-  'publish_checkins',
-  'publish_stream',
-  'rsvp_event',
-  'publish_actions'
-);

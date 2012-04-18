@@ -10,12 +10,12 @@
 
   <?php settings_errors(); ?>
 
-  <?php if (!empty($this->updated) || $this->destroyed): ?>
+  <?php if (!empty($this->updated) || !empty($this->destroyed)): ?>
     <div id="message" class="updated">
       <?php if (!empty($this->updated)): ?>
         <p><?php _e('Settings updated.'); ?></p>
       <?php endif; ?>
-      <?php if ($this->destroyed): ?>
+      <?php if (!empty($this->destroyed)): ?>
         <p><?php _e('ALL facebook accounts unlinked!'); ?></p>
       <?php endif; ?>
     </div>
@@ -23,7 +23,7 @@
 
   <h3>Usage</h3>
   <ul>
-    <li>Use the shortcode [dko-fblogin-button] to show the login button somewhere.</li>
+    <li>Use the shortcode <code>[dko-fblogin-button]</code> to show the login button somewhere.</li>
     <li>Use the <code>do_shortcode();</code> function if you want to use it in your theme.</li>
   </ul>
 
