@@ -213,6 +213,9 @@ class DKOFBLogin_Admin extends DKOWPPlugin
           $output[$key] = $val;
         }
       }
+      elseif ($key == 'login_redirect' || $key == 'register_redirect') {
+        $output[$key] = esc_url_raw($val);
+      }
       else {
         $output[$key] = $val;
       }
