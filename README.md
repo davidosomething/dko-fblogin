@@ -55,10 +55,7 @@ In progress
 ### Todo
 
 * Convert README into a WordPress AND GitHub compatible syntax
-
-
-Changelog
----------
-
-* 2011-04-11 - created
+* Use wp_remote_get/post and fallback to curl on fail
+  * why? Because you can specify SSL version 3 with curl
+  * Check for stream wrappers before using curl
 
