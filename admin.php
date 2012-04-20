@@ -75,7 +75,7 @@ class DKOFBLogin_Admin extends DKOWPPlugin
   }
 
   public function admin_print_styles() {
-    wp_enqueue_style(DKOFBLOGIN_SLUG . '-admin', $this->plugin_abspath . '/css/admin.css');
+    wp_enqueue_style(DKOFBLOGIN_SLUG . '-admin', plugin_dir_url(__FILE__). 'css/admin.css');
   } // admin_print_styles()
 
 
