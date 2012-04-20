@@ -69,9 +69,9 @@ $message .= ' the following username and password:</p><ul><li>';
 $message .= "username: " . $wp_userdata['user_login'];
 $message .= "</li><li>password: " . $wp_userdata['user_pass'] . '</li></ul>';
 
-$headers = 'From: ' . bloginfo('name') . ' <' . bloginfo('admin_email') . ">\r\n";
+$headers = 'From: ' . esc_attr(get_bloginfo('name')) . ' <' . get_bloginfo('admin_email') . ">\r\n";
 add_filter('wp_mail_content_type', function() { return 'text/html'; });
-wp_mail($fb_data->email, 'Your account on ' . bloginfo('name'), $message, $headers);
+wp_mail($fb_data->email, 'Your account on ' . esc_attr(get_bloginfo('name')), $message, $headers);
 
 // login user and redirect
 $this->wp_login($user_id); // log in if subscriber
