@@ -3,15 +3,13 @@
  * Plugin Name: DKO FB Login
  * Plugin URI: http://davidosomething.github.com/dko-fblogin/
  * Description: Facebook Login Button and integration with WordPress user system
- * Version: 1.0
+ * Version: 1.5
  * Author: David O'Trakoun (@davidosomething)
  * Author Email: me@davidosomething.com
  * Author URI: http://www.davidosomething.com/
  *
- *
  * Loosely adapted from Otto42's Simple Facebook Connect
  * http://www.facebook.com/ottopress
- *
  *
  * @TODO: check for curl
  * @TODO: check for stream wrappers:

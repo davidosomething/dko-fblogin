@@ -1,9 +1,8 @@
 DKO FB Login
 ============
 
-Version 0.1
-
 WordPress plugin that integrates Facebook logins with the WordPress user system.
+Original URL: https://github.com/davidosomething/dko-fblogin
 
 
 Functionality
