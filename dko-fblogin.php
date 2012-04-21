@@ -6,27 +6,23 @@
  * Author:        David O'Trakoun (@davidosomething)
  * Author Email:  me@davidosomething.com
  * Author URI:    http://www.davidosomething.com/
- * Version:       1.5.1
- *
+ * Version:       1.5.2
  *
  * Loosely adapted from Otto42's Simple Facebook Connect
  * http://www.facebook.com/ottopress
  *
- *
  * @TODO: check for curl
  * @TODO: check for stream wrappers:
-
 $w = stream_get_wrappers();
 echo 'openssl: ',  extension_loaded  ('openssl') ? 'yes':'no', "\n";
 echo 'http wrapper: ', in_array('http', $w) ? 'yes':'no', "\n";
 echo 'https wrapper: ', in_array('https', $w) ? 'yes':'no', "\n";
 echo 'wrappers: ', var_dump($w);
 echo "\n";
-
  */
 
 define('DKOFBLOGIN_PLUGIN_NAME',        'DKO FB Login');
-define('DKOFBLOGIN_PLUGIN_VERSION',     '1.5.1');
+define('DKOFBLOGIN_PLUGIN_VERSION',     '1.5.2'); // med increment on add options/url rewrites
 define('DKOFBLOGIN_SLUG',               'dkofblogin');
 define('DKOFBLOGIN_ENDPOINT_SLUG',      DKOFBLOGIN_SLUG . '-endpoint');
 define('DKOFBLOGIN_ENDPOINT_URL',       site_url('/' . DKOFBLOGIN_ENDPOINT_SLUG));
@@ -41,7 +37,7 @@ if (!defined('SERVER_ENVIRONMENT') || SERVER_ENVIRONMENT == 'PROD') {
     CURLOPT_SSL_VERIFYHOST => true,
     CURLOPT_SSL_VERIFYPEER => true,
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_SSLVERSION => 3
+    CURLOPT_SSLVERSION => 3 // fixes everything :D
   );
 }
 else { // local or dev
@@ -53,7 +49,6 @@ else { // local or dev
     CURLOPT_VERBOSE         => 1
   );
 }
-require_once dirname(__FILE__) . '/config.php';
 require_once dirname(__FILE__) . '/graphapi.php';
 require_once dirname(__FILE__) . '/plugin.php';
 $dkofblogin = new DKOFBLogin(__FILE__);

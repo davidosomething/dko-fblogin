@@ -5,6 +5,11 @@
  * fields). Doesn't do any API stuff!
  */
 
+if (!class_exists('DKOFBLogin')) {
+  exit;
+}
+
+if (!class_exists('DKOFBLogin_Admin')):
 class DKOFBLogin_Admin extends DKOWPPlugin
 {
   protected $options    = '';
@@ -267,3 +272,4 @@ class DKOFBLogin_Admin extends DKOWPPlugin
   }
 
 } // class
+endif;
