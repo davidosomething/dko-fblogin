@@ -7,10 +7,10 @@
 if (array_key_exists('error_msg', $_REQUEST)) {
   throw new Exception(htmlspecialchars($_REQUEST['error_msg']));
 }
-if (!array_key_exists('state', $_REQUEST) || !array_key_exists('dko_fblogin_state', $_SESSION)) {
+if (!array_key_exists('state', $_REQUEST) || !array_key_exists(DKOFBLOGIN_SLUG.'_state', $_SESSION)) {
   throw new Exception('Missing state, maybe CSRF');
 }
-if ($_REQUEST['state'] != $_SESSION['dko_fblogin_state']) {
+if ($_REQUEST['state'] != $_SESSION[DKOFBLOGIN_SLUG.'_state']) {
   throw new Exception('Invalid state, maybe CSRF');
 }
 

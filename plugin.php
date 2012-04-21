@@ -20,27 +20,64 @@ class DKOFBLogin extends DKOWPPlugin
    * run every time plugin loaded
    */
   public function __construct() {
-    if (!isset($_SESSION)) { session_start(); }
     parent::__construct(__FILE__);
+
+    $this->setup_options();
+    $this->setup_session();
+
     register_activation_hook(   __FILE__, array(&$this, 'activate'));
     register_deactivation_hook( __FILE__, array(&$this, 'deactivate'));
-
-    // setup plugin options
-    if (get_option(DKOFBLOGIN_OPTIONS_KEY) === FALSE) {
-      add_option(DKOFBLOGIN_OPTIONS_KEY, $this->default_options);
-    }
-    $this->options = get_option(DKOFBLOGIN_OPTIONS_KEY);
 
     add_action('init', array(&$this, 'initialize'));
     add_action('init', array(&$this, 'html_channel_file'));
   }
 
+  /**
+   * generate the options
+   */
+  private function setup_options() {
+    // setup plugin options
+    if (get_option(DKOFBLOGIN_OPTIONS_KEY) === FALSE) {
+      add_option(DKOFBLOGIN_OPTIONS_KEY, $this->default_options);
+    }
+    $this->options = get_option(DKOFBLOGIN_OPTIONS_KEY);
+  }
+
+  /**
+   * start a session and generate a state nonce for FB API
+   */
+  private function setup_session() {
+    if (!isset($_SESSION)) { session_start(); }
+    if (empty($_REQUEST['code'])) { // don't generate new session state if have code
+      $_SESSION[DKOFBLOGIN_SLUG.'_state'] = md5(uniqid(rand(), TRUE)); //CSRF protection
+    }
+  }
+
+  /**
+   * read the request superglobal to see if a link or unlink action was requested
+   */
+  function do_endpoints() {
+    if (!empty($_REQUEST[DKOFBLOGIN_SLUG.'_link'])) {
+      $this->fb_link();
+    }
+
+    if (!empty($_REQUEST[DKOFBLOGIN_SLUG.'_unlink'])) {
+      $this->fb_unlink();
+    }
+  }
+
+  /**
+   * callback for activation_hook
+   */
   public function activate() {
     add_rewrite_rule(DKOFBLOGIN_ENDPOINT_SLUG.'/?',     '?' . DKOFBLOGIN_SLUG . '_link=1',    'top');
     add_rewrite_rule(DKOFBLOGIN_DEAUTHORIZE_SLUG.'/?',  '?' . DKOFBLOGIN_SLUG . '_unlink=1',  'top');
     flush_rewrite_rules(true);
   }
 
+  /**
+   * callback for deactivation_hook
+   */
   public function deactivate() {
     flush_rewrite_rules(true);
   }
@@ -49,24 +86,13 @@ class DKOFBLogin extends DKOWPPlugin
    * run during WP initialize - no output plz
    */
   public function initialize() {
-    /* start a session up and create a new state (nonce for facebook auth) */
-    if (empty($_REQUEST['code'])) { // don't generate new session state if have code
-      $_SESSION[DKOFBLOGIN_SLUG.'_state'] = md5(uniqid(rand(), TRUE)); //CSRF protection
-    }
-
-    if (!empty($_REQUEST[DKOFBLOGIN_SLUG.'_link'])) {
-      $this->fb_link();
-    }
-
-    if (!empty($_REQUEST[DKOFBLOGIN_SLUG.'_unlink'])) {
-      $this->fb_unlink();
-    }
-
     add_filter('language_attributes',     array(&$this, 'html_fb_language_attributes'));
     add_action('wp_footer',               array(&$this, 'html_fbjs'), 20);
     add_shortcode('dko-fblogin-button',   array(&$this, 'html_shortcode_login_button'));
     add_shortcode('dko-fblink-button',    array(&$this, 'html_shortcode_link_button'));
     add_shortcode('dko-fblogout-button',  array(&$this, 'html_shortcode_logout_button'));
+
+    $this->do_endpoints();
   } // initialize()
 
   /**
@@ -80,21 +106,27 @@ class DKOFBLogin extends DKOWPPlugin
   }
 
   /**
+   * @return string link to login via facebook
+   */
+  public function login_link() {
+    $link = 'https://www.facebook.com/dialog/oauth?client_id=' . $this->options['app_id'];
+    if (array_key_exists('permissions', $this->options)) {
+      $link .= '&amp;scope=' . implode(',', $this->options['permissions']);
+    }
+    $link .= '&amp;redirect_uri=' . urlencode(DKOFBLOGIN_ENDPOINT_URL);
+    $link .= '&amp;state=' . $_SESSION[DKOFBLOGIN_SLUG.'_state'];
+    return $link;
+  }
+
+  /**
    * Shows a login link
+   * @return string html link for facebook login
    */
   public function html_shortcode_login_button($atts) {
     if (is_user_logged_in()) {
       return '';
     }
-    $html = '<a class="dko-fblogin-button" href="https://www.facebook.com/dialog/oauth?client_id='.$this->options['app_id'];
-    if (array_key_exists('permissions', $this->options)) {
-      $html .= '&amp;scope=' . implode(',', $this->options['permissions']);
-    }
-    $html .= '&amp;redirect_uri=' . urlencode(DKOFBLOGIN_ENDPOINT_URL);
-    $html .= '&amp;state=' . $_SESSION['dko_fblogin_state'];
-    $html .= '">Login through facebook</a>';
-
-    return $html;
+    return '<a class="dko-fblogin-button" href="' . $this->login_link() . '">Login through facebook</a>';
   } // login_button_shortcode()
 
   /**
@@ -107,7 +139,7 @@ class DKOFBLogin extends DKOWPPlugin
       $html .= '&amp;scope=' . implode(',', $this->options['permissions']);
     }
     $html .= '&amp;redirect_uri=' . urlencode(DKOFBLOGIN_ENDPOINT_URL);
-    $html .= '&amp;state=' . $_SESSION['dko_fblogin_state'];
+    $html .= '&amp;state=' . $_SESSION[DKOFBLOGIN_SLUG.'_state'];
     $html .= '">Login to facebook and link this account</a>';
     return $html;
   } // link_button_shortcode()
@@ -121,7 +153,7 @@ class DKOFBLogin extends DKOWPPlugin
       $html .= '&amp;scope=' . implode(',', $this->options['permissions']);
     }
     $html .= '&amp;redirect_uri=' . urlencode(DKOFBLOGIN_ENDPOINT_URL);
-    $html .= '&amp;state=' . $_SESSION['dko_fblogin_state'];
+    $html .= '&amp;state=' . $_SESSION[DKOFBLOGIN_SLUG.'_state'];
     $html .= '">Login through facebook</a>';
     return $html;
   } // logout_button_shortcode()
