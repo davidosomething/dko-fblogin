@@ -5,7 +5,7 @@
  */
 
 define('DKOFBLOGIN_PLUGIN_NAME',        'DKO FB Login');
-define('DKOFBLOGIN_PLUGIN_VERSION',     '1.3');
+define('DKOFBLOGIN_PLUGIN_VERSION',     '1.5'); // don't forget to update comment in dko-fblogin.php
 define('DKOFBLOGIN_SLUG',               'dkofblogin');
 define('DKOFBLOGIN_ENDPOINT_SLUG',      DKOFBLOGIN_SLUG . '-endpoint');
 define('DKOFBLOGIN_ENDPOINT_URL',       site_url('/' . DKOFBLOGIN_ENDPOINT_SLUG));

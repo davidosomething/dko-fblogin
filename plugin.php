@@ -1,12 +1,14 @@
 <?php
-if (!class_exists('DKOWPPluginFramework')) {
+if (!class_exists('DKOWPPluginFramework')):
   require_once dirname(__FILE__) . '/framework/base.php';
-}
+endif;
 
+if (!class_exists('DKOFBLogin')):
 class DKOFBLogin extends DKOWPPlugin
 {
-  private $options     = array();
-  private $default_options = array(
+  private $options  = array();
+  private $defaults = array(
+    'plugin_version'    => DKOFBLOGIN_PLUGIN_VERSION,
     'app_id'            => '',
     'app_secret'        => '',
     'confirm_destroy'   => false,
@@ -22,25 +24,25 @@ class DKOFBLogin extends DKOWPPlugin
   public function __construct() {
     parent::__construct(__FILE__);
 
-    $this->setup_options();
-    $this->setup_session();
-
     register_activation_hook(   __FILE__, array(&$this, 'activate'));
     register_deactivation_hook( __FILE__, array(&$this, 'deactivate'));
+
+    $this->setup_options();
+    $this->setup_session();
+    $this->check_update();
 
     add_action('init', array(&$this, 'initialize'));
     add_action('init', array(&$this, 'html_channel_file'));
   }
 
   /**
-   * generate the options
+   * generate the options if for some reason they don't exist
    */
   private function setup_options() {
-    // setup plugin options
-    if (get_option(DKOFBLOGIN_OPTIONS_KEY) === FALSE) {
-      add_option(DKOFBLOGIN_OPTIONS_KEY, $this->default_options);
-    }
     $this->options = get_option(DKOFBLOGIN_OPTIONS_KEY);
+    if ($this->options === false) {
+      add_option(DKOFBLOGIN_OPTIONS_KEY, $this->defaults);
+    }
   }
 
   /**
@@ -50,6 +52,17 @@ class DKOFBLogin extends DKOWPPlugin
     if (!isset($_SESSION)) { session_start(); }
     if (empty($_REQUEST['code'])) { // don't generate new session state if have code
       $_SESSION[DKOFBLOGIN_SLUG.'_state'] = md5(uniqid(rand(), TRUE)); //CSRF protection
+    }
+  }
+
+  /**
+   * Check to see if the plugin was updated, do maintenance
+   */
+  private function check_update() {
+    if (!array_key_exists('plugin_version', $this->options) || $this->options['plugin_version'] !== $this->defaults['plugin_version']) {
+      $this->options = array_merge($this->defaults, $this->options);
+      update_option(DKOFBLOGIN_OPTIONS_KEY, $this->options);
+      $this->activate(); // run the activation hook again!
     }
   }
 
@@ -68,6 +81,7 @@ class DKOFBLogin extends DKOWPPlugin
 
   /**
    * callback for activation_hook
+   * also called whenever the plugin is updated
    */
   public function activate() {
     add_rewrite_rule(DKOFBLOGIN_ENDPOINT_SLUG.'/?',     '?' . DKOFBLOGIN_SLUG . '_link=1',    'top');
@@ -187,14 +201,14 @@ class DKOFBLogin extends DKOWPPlugin
    * public since called by add_filter
    */
   public function html_fbjs($args = array()) {
-    $defaults = array(
+    $fbdefaults = array(
       'appId'       => $this->options['app_id'],
       'channelUrl'  => home_url('?fbchannel=1'),
       'status'      => true,
       'cookie'      => true,
       'xfbml'       => true
     );
-    $args = wp_parse_args($args, $defaults);
+    $args = wp_parse_args($args, $fbdefaults);
     echo $this->render('fbjs', $args);
   } // html_fbjs()
 
@@ -373,3 +387,4 @@ class DKOFBLogin extends DKOWPPlugin
     $this->redirect($options['login_redirect'], admin_url('profile.php'));
   }
 } // end of class
+endif;
