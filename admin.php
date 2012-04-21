@@ -66,7 +66,7 @@ class DKOFBLogin_Admin extends DKOWPPlugin
   public function admin_menu() {
     // admin options page
     $this->menu_hook = add_options_page(
-      __(DKOFBLOGIN_PLUGIN_NAME.' Options'),
+      __(DKOFBLOGIN_PLUGIN_NAME . ' Options'),
       __(DKOFBLOGIN_PLUGIN_NAME),
       'manage_options',
       DKOFBLOGIN_SLUG,

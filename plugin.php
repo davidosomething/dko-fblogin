@@ -8,7 +8,7 @@ class DKOFBLogin extends DKOWPPlugin
 {
   private $options  = array();
   private $defaults = array(
-    'plugin_version'    => DKOFBLOGIN_PLUGIN_VERSION,
+    'installed_version' => '0',
     'app_id'            => '',
     'app_secret'        => '',
     'confirm_destroy'   => false,
@@ -21,11 +21,11 @@ class DKOFBLogin extends DKOWPPlugin
   /**
    * run every time plugin loaded
    */
-  public function __construct() {
-    parent::__construct(__FILE__);
+  public function __construct($plugin_file) {
+    parent::__construct($plugin_file);
 
-    register_activation_hook(   __FILE__, array(&$this, 'activate'));
-    register_deactivation_hook( __FILE__, array(&$this, 'deactivate'));
+    register_activation_hook($plugin_file, array(&$this, 'activate'));
+    register_deactivation_hook($plugin_file, array(&$this, 'deactivate'));
 
     $this->setup_options();
     $this->setup_session();
@@ -59,10 +59,10 @@ class DKOFBLogin extends DKOWPPlugin
    * Check to see if the plugin was updated, do maintenance
    */
   private function check_update() {
-    if (!array_key_exists('plugin_version', $this->options) || $this->options['plugin_version'] !== $this->defaults['plugin_version']) {
+    if (!array_key_exists('installed_version', $this->options) || $this->options['installed_version'] !== $this->defaults['installed_version']) {
       $this->options = array_merge($this->defaults, $this->options);
       update_option(DKOFBLOGIN_OPTIONS_KEY, $this->options);
-      $this->activate(); // run the activation hook again!
+      add_action('init', array(&$this, 'activate')); // run the activation hook again!
     }
   }
 
