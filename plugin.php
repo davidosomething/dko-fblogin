@@ -257,10 +257,10 @@ class DKOFBLogin extends DKOWPPlugin
     $wp_userdata = array();
 
     if (property_exists($this->fb_data, 'username')) {
-      $username_prefix = $fb_data->username;
+      $username_prefix = $this->fb_data->username;
     }
     else { // use email as username if no fb username
-      $username_prefix = strstr($fb_data->email, '@', true);
+      $username_prefix = strstr($this->fb_data->email, '@', true);
     }
 
     // hook into this filter if you need to check usernames from any other
@@ -270,11 +270,11 @@ class DKOFBLogin extends DKOWPPlugin
       $username_prefix
     );
     $wp_userdata['user_pass']   = wp_generate_password();
-    $wp_userdata['user_email']  = $fb_data->email;
-    $wp_userdata['first_name']  = $fb_data->first_name;
-    $wp_userdata['last_name']   = $fb_data->last_name;
+    $wp_userdata['user_email']  = $this->fb_data->email;
+    $wp_userdata['first_name']  = $this->fb_data->first_name;
+    $wp_userdata['last_name']   = $this->fb_data->last_name;
     $user_id = wp_insert_user($wp_userdata);
-    $this->setfbmeta($user_id, $fb_data->id, $this->get_access_token());
+    $this->setfbmeta($user_id, $this->fb_data->id, $this->get_access_token());
 
     do_action(
       DKOFBLOGIN_SLUG.'_user_registered',
@@ -283,12 +283,12 @@ class DKOFBLogin extends DKOWPPlugin
 
     // login user and redirect
     $this->wp_login($user_id); // log in if subscriber
-    $this->redirect($options['register_redirect'], admin_url('profile.php'));
+    $this->redirect($this->options['register_redirect'], admin_url('profile.php'));
   } // register_new_user()
 
   public function email_after_register($user_args) {
     // email user with non-fb login details
-    $message = '<p>Hi ' . $fb_data->name . ',</p>';
+    $message = '<p>Hi ' . $this->fb_data->name . ',</p>';
     $message .= '<p>You logged in via Facebook on ' . bloginfo('name');
     $message .= ' so we created an account for you. Keep this email for reference.</p>';
     $message .= '<p>You can always login via your linked Facebook account or use';
@@ -343,9 +343,9 @@ class DKOFBLogin extends DKOWPPlugin
     }
 
     // make sure user is only a subscriber
-    $user_data = get_userdata($user_id);
+    $this->user_data = get_userdata($user_id);
 
-    if (count($user_data->roles) > 1 && $user_data->roles[0] !== 'subscriber') {
+    if (count($this->user_data->roles) > 1 && $this->user_data->roles[0] !== 'subscriber') {
       return;
     }
 
@@ -354,7 +354,7 @@ class DKOFBLogin extends DKOWPPlugin
     wp_set_auth_cookie($user_id, true);
 
     // in case anything is hooked to real login function
-    do_action('wp_login', $user_data->user_login);
+    do_action('wp_login', $this->user_data->user_login);
   } // wp_login()
 
   /**
@@ -363,7 +363,7 @@ class DKOFBLogin extends DKOWPPlugin
    * @param string  $default   URL to redirect to if $location is blank
    * @param int     $status    HTTP status code to return
    */
-  public static function redirect($location = '', $default = '', $status = 302) {
+  public function redirect($location = '', $default = '', $status = 302) {
     echo 'supposed to redirect!';
     if ($location) {
       header('location: ' . $location, true, $status); // send 302 Found header
@@ -384,22 +384,21 @@ class DKOFBLogin extends DKOWPPlugin
    * @param object $fb_data fb data from graph api
    * @return object WordPress User object or false
    */
-  public static function get_user_by_fbdata($fb_data) {
+  public function get_user_by_fbdata() {
     $user_query = new WP_User_Query(array(
       'meta_key'      => DKOFBLOGIN_USERMETA_KEY_FBID,
-      'meta_value'    => $fb_data->id,
+      'meta_value'    => $this->fb_data->id,
       'meta_compare'  => '='
     ));
     if ($user_query->total_users) {
       return $user_query->results[0];
     }
 
-    return get_user_by('email', $fb_data->email);
+    return get_user_by('email', $this->fb_data->email);
   } // get_user_by_fbdata()
 
   /**
    * Callback for DKOFBLOGIN_SLUG.'_create_username' filter.
-   * Also a static function that recurses.
    * Checks if $username is taken, if so add a number. Recurse until not taken.
    *
    * @TODO this could take a while, consider another method
@@ -408,7 +407,7 @@ class DKOFBLogin extends DKOWPPlugin
    * @param string $prefix    some number to append to the end of the username
    * @return string some valid untaken WordPress username
    */
-  public static function create_username($username = '', $prefix = '') {
+  public function create_username($username = '', $prefix = '') {
     if (!$username) {
       // @TODO wp_die($msg, $title, $args=array())
       throw new Exception('create_username: username not specified');
@@ -429,7 +428,7 @@ class DKOFBLogin extends DKOWPPlugin
       $prefix = 0;
     }
     $prefix = $prefix + 1;
-    return self::create_username($username, $prefix);
+    return $this->create_username($username, $prefix);
   } // create_username()
 
   /**

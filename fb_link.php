@@ -28,12 +28,15 @@ if ($_REQUEST['state'] != $_SESSION[DKOFBLOGIN_SLUG.'_state']) {
 if ($this->get_access_token()) {
   $this->fb_data = dkofblogin_graphapi($this->get_access_token(), 'me');
 }
+else {
+  throw new Exception('Couldn\'t get or parse access token.');
+}
 if (!$this->fb_data) { // got access token
   // @TODO wp_die($msg, $title, $args=array())
   throw new Exception('Couldn\'t get or parse user data.');
 }
 
-$this->user_data = $this->get_user_by_fbdata($this->fb_data);
+$this->user_data = $this->get_user_by_fbdata();
 
 // found associated WordPress user
 if ($this->user_data) {
