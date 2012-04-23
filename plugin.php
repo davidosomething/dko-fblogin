@@ -26,6 +26,7 @@ class DKOFBLogin extends DKOWPPlugin
 
     register_activation_hook($plugin_file, array(&$this, 'activate'));
     register_deactivation_hook($plugin_file, array(&$this, 'deactivate'));
+    // register uninstall, delete options
 
     $this->setup_options();
     $this->setup_session();
@@ -70,6 +71,7 @@ class DKOFBLogin extends DKOWPPlugin
    * read the request superglobal to see if a link or unlink action was requested
    */
   function do_endpoints() {
+    // @TODO check_nonce
     if (!empty($_REQUEST[DKOFBLOGIN_SLUG.'_link'])) {
       $this->fb_link();
     }
@@ -123,12 +125,17 @@ class DKOFBLogin extends DKOWPPlugin
    * @return string link to login via facebook
    */
   public function login_link() {
-    $link = 'https://www.facebook.com/dialog/oauth?client_id=' . $this->options['app_id'];
+    $link_query = array(
+      'client_id'     => $this->options['app_id'],
+      'redirect_uri'  => DKOFBLOGIN_ENDPOINT_URL,
+      'state'         => $_SESSION[DKOFBLOGIN_SLUG.'_state']
+    );
     if (array_key_exists('permissions', $this->options)) {
-      $link .= '&amp;scope=' . implode(',', $this->options['permissions']);
+      $link_query['scope'] = implode(',', $this->options['permissions']);
     }
-    $link .= '&amp;redirect_uri=' . urlencode(DKOFBLOGIN_ENDPOINT_URL);
-    $link .= '&amp;state=' . $_SESSION[DKOFBLOGIN_SLUG.'_state'];
+
+    // build_query does urlencoding.
+    $link = 'https://www.facebook.com/dialog/oauth?' . build_query($link_query);
     return $link;
   }
 
@@ -140,7 +147,7 @@ class DKOFBLogin extends DKOWPPlugin
     if (is_user_logged_in()) {
       return '';
     }
-    return '<a class="dko-fblogin-button" href="' . $this->login_link() . '">Login through facebook</a>';
+    return '<a class="dko-fblogin-loginout" href="' . $this->login_link() . '">Login through facebook</a>';
   } // login_button_shortcode()
 
   /**
@@ -148,48 +155,15 @@ class DKOFBLogin extends DKOWPPlugin
    * the user's profile if already logged in
    */
   public function html_shortcode_link_button($atts) {
-    $html = '<a class="dko-fblogin-button" href="https://www.facebook.com/dialog/oauth?client_id='.$this->options['app_id'];
-    if (array_key_exists('permissions', $this->options)) {
-      $html .= '&amp;scope=' . implode(',', $this->options['permissions']);
-    }
-    $html .= '&amp;redirect_uri=' . urlencode(DKOFBLOGIN_ENDPOINT_URL);
-    $html .= '&amp;state=' . $_SESSION[DKOFBLOGIN_SLUG.'_state'];
-    $html .= '">Login to facebook and link this account</a>';
-    return $html;
+    return '<a class="dko-fblogin-login" href="' . $this->login_link() . '">Login to facebook and link this account</a>';
   } // link_button_shortcode()
 
   /**
    * This is always a link to logout (but not deauthorize) from facebook
    */
   public function html_shortcode_logout_button($atts) {
-    $html = '<a class="dko-fblogin-button" href="https://www.facebook.com/dialog/oauth?client_id='.$this->options['app_id'];
-    if (array_key_exists('permissions', $this->options)) {
-      $html .= '&amp;scope=' . implode(',', $this->options['permissions']);
-    }
-    $html .= '&amp;redirect_uri=' . urlencode(DKOFBLOGIN_ENDPOINT_URL);
-    $html .= '&amp;state=' . $_SESSION[DKOFBLOGIN_SLUG.'_state'];
-    $html .= '">Login through facebook</a>';
-    return $html;
+    return '';
   } // logout_button_shortcode()
-
-  /**
-   *
-   */
-  public function html_social_plugin_login_button() {
-    // Extract the attributes
-    extract(shortcode_atts(array(
-      'show_faces'        => 'false',
-      'max_rows'          => '1',
-      'width'             => '200'//,
-      //'registration_url'  => //$this->endpoint
-    ), $atts));
-    $html = '<div class="fb-login-button" data-show-faces="' . $show_faces . '" data-max-rows="' . $max_rows . '" data-width="' . $width . '" ';
-    if (isset($registration_url)) {
-      $html .= 'data-registration-url="' . $registration_url . '"';
-    }
-    $html .= '></div>';
-    return $html;
-  } // html_social_plugin_login_button()
 
   // fix up the html tag to have the FBML extensions
   public function html_fb_language_attributes($lang) {
@@ -243,6 +217,7 @@ class DKOFBLogin extends DKOWPPlugin
    */
   private function setfbmeta($user_id = 0, $fbid = '', $access_token = '') {
     if (!$user_id) {
+      // @TODO wp_die($msg, $title, $args=array())
       throw new Exception('setfbmeta: need user id');
     }
     update_user_meta($user_id, DKOFBLOGIN_USERMETA_KEY_FBID, $fbid);
@@ -256,6 +231,7 @@ class DKOFBLogin extends DKOWPPlugin
    */
   private function wp_login($user_id = 0) {
     if (!$user_id) {
+      // @TODO wp_die($msg, $title, $args=array())
       throw new Exception('login: Invalid user_id');
     }
 
@@ -320,6 +296,7 @@ class DKOFBLogin extends DKOWPPlugin
    */
   public static function create_username($username = '', $prefix = '') {
     if (!$username) {
+      // @TODO wp_die($msg, $title, $args=array())
       throw new Exception('create_username: username not specified');
     }
     $username = preg_replace("/[^0-9a-zA-Z ]/m", '', $username);
@@ -348,15 +325,18 @@ class DKOFBLogin extends DKOWPPlugin
     global $dkofblogin_http_settings;
     $is_configured = get_option(DKOFBLOGIN_SLUG . '_is_configured');
     if (!$is_configured) {
+      // @TODO wp_die($msg, $title, $args=array())
       throw new Exception('dko-fblogin is not configured properly');
     }
 
-    $options = get_option(DKOFBLOGIN_OPTIONS_KEY);
-    $token_url = 'https://graph.facebook.com/oauth/access_token?'
-      . 'client_id=' . $options['app_id']
-      . '&redirect_uri=' . urlencode(DKOFBLOGIN_ENDPOINT_URL)
-      . '&client_secret=' . $options['app_secret']
-      . '&code=' . $_REQUEST['code'];
+    // build_query will encode for you
+    $token_query = array(
+      'client_id'     => $this->options['app_id'],
+      'redirect_uri'  => DKOFBLOGIN_ENDPOINT_URL,
+      'client_secret' => $this->options['app_secret'],
+      'code'          => $_REQUEST['code']
+    );
+    $token_url = 'https://graph.facebook.com/oauth/access_token?' . build_query($token_query);
     $ch = curl_init($token_url);
     curl_setopt_array($ch, $dkofblogin_http_settings);
     $result = curl_exec($ch);
@@ -368,6 +348,7 @@ class DKOFBLogin extends DKOWPPlugin
     }
 
     if (curl_errno($ch)) {
+      // @TODO wp_die($msg, $title, $args=array())
       throw new Exception(curl_error($ch));
     }
 
@@ -384,7 +365,7 @@ class DKOFBLogin extends DKOWPPlugin
       $user_id = get_current_user_id();
       $this->setfbmeta($user_id, '', '');
     }
-    $this->redirect($options['login_redirect'], admin_url('profile.php'));
+    $this->redirect($this->options['login_redirect'], admin_url('profile.php'));
   }
 } // end of class
 endif;

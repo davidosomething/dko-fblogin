@@ -5,12 +5,15 @@
 
 /* ==|== no haxors ========================================================== */
 if (array_key_exists('error_msg', $_REQUEST)) {
+      // @TODO wp_die($msg, $title, $args=array())
   throw new Exception(htmlspecialchars($_REQUEST['error_msg']));
 }
 if (!array_key_exists('state', $_REQUEST) || !array_key_exists(DKOFBLOGIN_SLUG.'_state', $_SESSION)) {
+      // @TODO wp_die($msg, $title, $args=array())
   throw new Exception('Missing state, maybe CSRF');
 }
 if ($_REQUEST['state'] != $_SESSION[DKOFBLOGIN_SLUG.'_state']) {
+      // @TODO wp_die($msg, $title, $args=array())
   throw new Exception('Invalid state, maybe CSRF');
 }
 
@@ -23,6 +26,7 @@ if ($access_token) {
   $fb_data = dkofblogin_graphapi($access_token, 'me');
 }
 if (!$fb_data) { // got access token
+      // @TODO wp_die($msg, $title, $args=array())
   throw new Exception('Couldn\'t get or parse user data.');
 }
 

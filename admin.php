@@ -153,10 +153,9 @@ class DKOFBLogin_Admin extends DKOWPPlugin
 
   /* @TODO: can make this portable, move to framework */
   public function html_textfield($args) {
-    $options = get_option(DKOFBLOGIN_OPTIONS_KEY);
     $field_id = DKOFBLOGIN_SLUG . '-' . $args['field'];
     $field_name = DKOFBLOGIN_OPTIONS_KEY . '[' . $args['field'] . ']';
-    $field_value = isset($options[$args['field']]) ? $options[$args['field']] : '';
+    $field_value = isset($this->options[$args['field']]) ? $this->options[$args['field']] : '';
     if (array_key_exists('pre', $args)) {
       echo $args['pre'];
     }
@@ -181,8 +180,7 @@ class DKOFBLogin_Admin extends DKOWPPlugin
    * html for the permissions checkboxes
    */
   public function html_field_permissions($args) {
-    $options = get_option(DKOFBLOGIN_OPTIONS_KEY);
-    $permissions = array_key_exists('permissions', $options) ? $options['permissions'] : array();
+    $permissions = array_key_exists('permissions', $this->options) ? $this->options['permissions'] : array();
     $field_name = DKOFBLOGIN_OPTIONS_KEY . '[permissions][]';
     echo $this->render('admin-permissions');
     foreach ($this->available_permissions as $p) {
