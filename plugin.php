@@ -18,6 +18,9 @@ class DKOFBLogin extends DKOWPPlugin
   );
   protected $destroyed = false;
 
+  private $user_data    = null;
+  private $fb_data      = null;
+
   /**
    * run every time plugin loaded
    */
@@ -34,7 +37,7 @@ class DKOFBLogin extends DKOWPPlugin
 
     add_action('init', array(&$this, 'initialize'));
     add_action('init', array(&$this, 'html_channel_file'));
-  }
+  } // __construct()
 
   /**
    * generate the options if for some reason they don't exist
@@ -44,7 +47,7 @@ class DKOFBLogin extends DKOWPPlugin
     if ($this->options === false) {
       add_option(DKOFBLOGIN_OPTIONS_KEY, $this->defaults);
     }
-  }
+  } // setup_options()
 
   /**
    * start a session and generate a state nonce for FB API
@@ -54,7 +57,7 @@ class DKOFBLogin extends DKOWPPlugin
     if (empty($_REQUEST['code'])) { // don't generate new session state if have code
       $_SESSION[DKOFBLOGIN_SLUG.'_state'] = md5(uniqid(rand(), TRUE)); //CSRF protection
     }
-  }
+  } // setup_session()
 
   /**
    * Check to see if the plugin was updated, do maintenance
@@ -65,7 +68,7 @@ class DKOFBLogin extends DKOWPPlugin
       update_option(DKOFBLOGIN_OPTIONS_KEY, $this->options);
       add_action('init', array(&$this, 'activate')); // run the activation hook again!
     }
-  }
+  } // check_update()
 
   /**
    * read the request superglobal to see if a link or unlink action was requested
@@ -79,7 +82,7 @@ class DKOFBLogin extends DKOWPPlugin
     if (!empty($_REQUEST[DKOFBLOGIN_SLUG.'_unlink'])) {
       $this->fb_unlink();
     }
-  }
+  } // do_endpoints()
 
   /**
    * callback for activation_hook
@@ -89,14 +92,14 @@ class DKOFBLogin extends DKOWPPlugin
     add_rewrite_rule(DKOFBLOGIN_ENDPOINT_SLUG.'/?',     '?' . DKOFBLOGIN_SLUG . '_link=1',    'top');
     add_rewrite_rule(DKOFBLOGIN_DEAUTHORIZE_SLUG.'/?',  '?' . DKOFBLOGIN_SLUG . '_unlink=1',  'top');
     flush_rewrite_rules(true);
-  }
+  } // activate()
 
   /**
    * callback for deactivation_hook
    */
   public function deactivate() {
     flush_rewrite_rules(true);
-  }
+  } // deactivate()
 
   /**
    * run during WP initialize - no output plz
@@ -119,7 +122,7 @@ class DKOFBLogin extends DKOWPPlugin
       return implode(',', $this->options['permissions']);
     }
     return '';
-  }
+  } // permissions_list()
 
   /**
    * @return string link to login via facebook
@@ -137,7 +140,7 @@ class DKOFBLogin extends DKOWPPlugin
     // build_query does urlencoding.
     $link = 'https://www.facebook.com/dialog/oauth?' . build_query($link_query);
     return $link;
-  }
+  } // login_link()
 
   /**
    * Shows a login link
@@ -206,8 +209,112 @@ class DKOFBLogin extends DKOWPPlugin
    * do facebook login
    */
   private function fb_link() {
+    add_action(DKOFBLOGIN_SLUG.'_user_found',       array(&$this, 'wp_login_via_fbmeta'));
+    add_action(DKOFBLOGIN_SLUG.'_user_not_found',   array(&$this, 'associate_user_fbmeta'));
+    add_action(DKOFBLOGIN_SLUG.'_user_not_found',   array(&$this, 'register_new_user'));
+    add_action(DKOFBLOGIN_SLUG.'_user_registered',  array(&$this, 'email_after_register'));
+
+    add_filter(DKOFBLOGIN_SLUG.'_username_available', array(&$this, 'username'));
+    add_filter(DKOFBLOGIN_SLUG.'_create_username',    array(&$this, 'create_username'));
+    add_filter('wp_mail_content_type', function() { return 'text/html'; });
+
     require_once dirname(__FILE__) . '/fb_link.php';
-  }
+  } // fb_link()
+
+  /**
+   * callback for user_found hook:
+   * update token, login, redirect to profile
+   */
+  public function wp_login_via_fbmeta() {
+    if (!$this->user_data || !$this->fb_data || !$this->get_access_token()) { exit; }
+    $user_id = $this->user_data->ID;
+    $this->setfbmeta($user_id, $this->fb_data->id, $this->get_access_token());
+    $this->wp_login($user_id);
+    $this->redirect($this->options['login_redirect'], admin_url('profile.php'));
+    exit; // just in case
+  } // wp_login_via_fbmeta()
+
+  /**
+   * Callback for user_not_found hook
+   * Check if user logged in, if so, associate fbdata nad access token.
+   */
+  public function associate_user_fbmeta() {
+    $user_id = get_current_user_id();
+    if (!$user_id) { return; }
+    $this->setfbmeta($user_id, $this->fb_data->id, $this->get_access_token());
+    $this->redirect($this->options['login_redirect'], admin_url('profile.php'));
+    exit; // just in case
+  } // associate_user_fbmeta()
+
+  /**
+   * Generates a valid username
+   * Inserts a new user into the WordPress users table
+   * Runs hooks
+   * Logs user in
+   * Redirects user to registration page to continue filling out profile
+   */
+  public function register_new_user() {
+    $wp_userdata = array();
+
+    if (property_exists($this->fb_data, 'username')) {
+      $username_prefix = $fb_data->username;
+    }
+    else { // use email as username if no fb username
+      $username_prefix = strstr($fb_data->email, '@', true);
+    }
+
+    // hook into this filter if you need to check usernames from any other
+    // sources
+    $wp_userdata['user_login'] = apply_filters(
+      DKOFBLOGIN_SLUG.'create_username',
+      $username_prefix
+    );
+    $wp_userdata['user_pass']   = wp_generate_password();
+    $wp_userdata['user_email']  = $fb_data->email;
+    $wp_userdata['first_name']  = $fb_data->first_name;
+    $wp_userdata['last_name']   = $fb_data->last_name;
+    $user_id = wp_insert_user($wp_userdata);
+    $this->setfbmeta($user_id, $fb_data->id, $this->get_access_token());
+
+    do_action(
+      DKOFBLOGIN_SLUG.'_user_registered',
+      $wp_userdata
+    );
+
+    // login user and redirect
+    $this->wp_login($user_id); // log in if subscriber
+    $this->redirect($options['register_redirect'], admin_url('profile.php'));
+  } // register_new_user()
+
+  public function email_after_register($user_args) {
+    // email user with non-fb login details
+    $message = '<p>Hi ' . $fb_data->name . ',</p>';
+    $message .= '<p>You logged in via Facebook on ' . bloginfo('name');
+    $message .= ' so we created an account for you. Keep this email for reference.</p>';
+    $message .= '<p>You can always login via your linked Facebook account or use';
+    $message .= ' the following username and password:</p><ul><li>';
+    $message .= "username: " . $wp_userdata['user_login'];
+    $message .= "</li><li>password: " . $wp_userdata['user_pass'] . '</li></ul>';
+
+    $message = apply_filters(
+      DKOFBLOGIN_SLUG.'_email_message',
+      $message
+    );
+
+    $headers = 'From: ' . get_bloginfo('name') . ' <' . get_bloginfo('admin_email') . ">\r\n";
+
+    $headers = apply_filters(
+      DKOFBLOGIN_SLUG.'_email_headers',
+      $headers
+    );
+
+    wp_mail(
+      $user_args['user_email'],
+      'Your account on ' . get_bloginfo('name'),
+      $message,
+      $headers
+    );
+  } // email_after_register()
 
   /**
    * by using the update_user_meta we ensure only one FB acct per WP user
@@ -222,7 +329,7 @@ class DKOFBLogin extends DKOWPPlugin
     }
     update_user_meta($user_id, DKOFBLOGIN_USERMETA_KEY_FBID, $fbid);
     update_user_meta($user_id, DKOFBLOGIN_USERMETA_KEY_TOKEN, $access_token);
-  }
+  } // setfbmeta()
 
   /**
    * log a user in to wordpress
@@ -246,9 +353,9 @@ class DKOFBLogin extends DKOWPPlugin
     wp_set_current_user($user_id);
     wp_set_auth_cookie($user_id, true);
 
-    // in case anything is hooked to this function
+    // in case anything is hooked to real login function
     do_action('wp_login', $user_data->user_login);
-  }
+  } // wp_login()
 
   /**
    * redirect to $location or $default with $status
@@ -268,9 +375,12 @@ class DKOFBLogin extends DKOWPPlugin
     }
     header('location: ' . $default, true, $status); // send 302 Found header
     exit; // just in case
-  }
+  } // redirect()
 
   /**
+   * Gets a WordPress user based on provided facebook id. If the user isn't
+   * found by ID, try the user's email address.
+   *
    * @param object $fb_data fb data from graph api
    * @return object WordPress User object or false
    */
@@ -285,11 +395,15 @@ class DKOFBLogin extends DKOWPPlugin
     }
 
     return get_user_by('email', $fb_data->email);
-  }
+  } // get_user_by_fbdata()
 
   /**
-   * checks if $username is taken, if so add a number. Recurse until not taken.
+   * Callback for DKOFBLOGIN_SLUG.'_create_username' filter.
+   * Also a static function that recurses.
+   * Checks if $username is taken, if so add a number. Recurse until not taken.
+   *
    * @TODO this could take a while, consider another method
+   *
    * @param string $username  what username to try
    * @param string $prefix    some number to append to the end of the username
    * @return string some valid untaken WordPress username
@@ -299,18 +413,32 @@ class DKOFBLogin extends DKOWPPlugin
       // @TODO wp_die($msg, $title, $args=array())
       throw new Exception('create_username: username not specified');
     }
+    // lazy sanitize username
     $username = preg_replace("/[^0-9a-zA-Z ]/m", '', $username);
     $attempt = $username . $prefix;
-    $taken = get_user_by('login', $attempt);
-    if (!$taken) {
+
+    // hook into this filter if you need to check another source for valid
+    // usernames, return boolean $is_taken
+    $is_taken = apply_filter(DKOFBLOGIN_SLUG.'_username_available', $attempt);
+
+    if (!$is_taken) { // this whole function/filter recurses until this is met
       return $attempt;
     }
+
     if (!$prefix) {
       $prefix = 0;
     }
     $prefix = $prefix + 1;
     return self::create_username($username, $prefix);
-  }
+  } // create_username()
+
+  /**
+   * @param string $username to check if exists in database
+   * @return object WordPress user if exists, false otherwise
+   */
+  public function username_available($username) {
+    return get_user_by('login', $username);
+  } // username_available()
 
   /**
    * Get access token from API or user meta if logged in
@@ -318,8 +446,15 @@ class DKOFBLogin extends DKOWPPlugin
    * @param int user_id optional user_id to get meta from
    */
   function get_access_token($user_id = 0) {
+    static $cached_access_token;
+
+    if ($cached_access_token) {
+      return $cached_access_token;
+    }
+
     if ($user_id) {
-      return get_the_author_meta(DKOFBLOGIN_USERMETA_KEY_TOKEN, $user_id);
+      $cached_access_token = get_the_author_meta(DKOFBLOGIN_USERMETA_KEY_TOKEN, $user_id);
+      return $cached_access_token;
     }
 
     global $dkofblogin_http_settings;
@@ -337,6 +472,8 @@ class DKOFBLogin extends DKOWPPlugin
       'code'          => $_REQUEST['code']
     );
     $token_url = 'https://graph.facebook.com/oauth/access_token?' . build_query($token_query);
+
+    // request the token
     $ch = curl_init($token_url);
     curl_setopt_array($ch, $dkofblogin_http_settings);
     $result = curl_exec($ch);
@@ -353,7 +490,8 @@ class DKOFBLogin extends DKOWPPlugin
     }
 
     curl_close($ch);
-    return str_replace('access_token=', '', $result);
+    $cached_access_token = str_replace('access_token=', '', $result);
+    return $cached_access_token;
   } // dkofblogin_get_access_token()
 
   /**
@@ -366,6 +504,7 @@ class DKOFBLogin extends DKOWPPlugin
       $this->setfbmeta($user_id, '', '');
     }
     $this->redirect($this->options['login_redirect'], admin_url('profile.php'));
-  }
+  } // fb_unlink()
+
 } // end of class
 endif;
