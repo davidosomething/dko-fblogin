@@ -29,6 +29,7 @@ if ($this->get_access_token()) {
   $this->fb_data = dkofblogin_graphapi($this->get_access_token(), 'me');
 }
 else {
+  // @TODO wp_die($msg, $title, $args=array())
   throw new Exception('Couldn\'t get or parse access token.');
 }
 if (!$this->fb_data) { // got access token
@@ -36,26 +37,27 @@ if (!$this->fb_data) { // got access token
   throw new Exception('Couldn\'t get or parse user data.');
 }
 
-$this->user_data = $this->get_user_by_fbdata();
+$found_user_data = apply_filter(DKOFBLOGIN_SLUG.'_find_user');
 
-// found associated WordPress user
-if ($this->user_data) {
+// the following hooks need to redirect after completion!
+if ($found_user_data) { // found associated WordPress user
   do_action(
     DKOFBLOGIN_SLUG.'_user_found',
     $this->fb_data,
     $this->get_access_token(),
-    $this->user_data
+    $found_user_data
   );
 }
-
-// FB ID not found in meta data -- hook into this action with priority < 10 if
-// you want to authenticate from other sources before associating with an
-// existing user or creating a new user
-do_action(
-  DKOFBLOGIN_SLUG.'_user_not_found',
-  $this->fb_data,
-  $this->get_access_token()
-);
+else {
+  // FB ID not found in meta data -- hook into this action with priority < 10 if
+  // you want to authenticate from other sources before associating with an
+  // existing user or creating a new user
+  do_action(
+    DKOFBLOGIN_SLUG.'_user_not_found',
+    $this->fb_data,
+    $this->get_access_token()
+  );
+}
 
 // 403 unauthorized, shouldn't ever get to this point
 header('location: ' . site_url(), true, 403); exit;

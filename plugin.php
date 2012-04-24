@@ -1,6 +1,6 @@
 <?php
 if (!class_exists('DKOWPPluginFramework')):
-  require_once dirname(__FILE__) . '/framework/base.php';
+  require_once dirname( __FILE__ ) . '/framework/base.php';
 endif;
 
 if (!class_exists('DKOFBLogin')):
@@ -18,8 +18,8 @@ class DKOFBLogin extends DKOWPPlugin
   );
   protected $destroyed = false;
 
-  private $user_data    = null;
-  private $fb_data      = null;
+  private $current_user_data = null;
+  private $fb_data           = null;
 
   /**
    * run every time plugin loaded
@@ -71,20 +71,6 @@ class DKOFBLogin extends DKOWPPlugin
   } // check_update()
 
   /**
-   * read the request superglobal to see if a link or unlink action was requested
-   */
-  function do_endpoints() {
-    // @TODO check_nonce
-    if (!empty($_REQUEST[DKOFBLOGIN_SLUG.'_link'])) {
-      $this->fb_link();
-    }
-
-    if (!empty($_REQUEST[DKOFBLOGIN_SLUG.'_unlink'])) {
-      $this->fb_unlink();
-    }
-  } // do_endpoints()
-
-  /**
    * callback for activation_hook
    * also called whenever the plugin is updated
    */
@@ -105,13 +91,23 @@ class DKOFBLogin extends DKOWPPlugin
    * run during WP initialize - no output plz
    */
   public function initialize() {
-    add_filter('language_attributes',     array(&$this, 'html_fb_language_attributes'));
-    add_action('wp_footer',               array(&$this, 'html_fbjs'), 20);
+    if (!is_admin()) {
+      add_filter('language_attributes', array(&$this, 'html_fb_language_attributes'));
+      add_action('wp_footer',           array(&$this, 'html_fbjs'), 20);
+    }
+
     add_shortcode('dko-fblogin-button',   array(&$this, 'html_shortcode_login_button'));
     add_shortcode('dko-fblink-button',    array(&$this, 'html_shortcode_link_button'));
     add_shortcode('dko-fblogout-button',  array(&$this, 'html_shortcode_logout_button'));
 
-    $this->do_endpoints();
+    // @TODO check_nonce
+    if (!empty($_REQUEST[DKOFBLOGIN_SLUG.'_link'])) {
+      $this->fb_link();
+    }
+
+    if (!empty($_REQUEST[DKOFBLOGIN_SLUG.'_unlink'])) {
+      $this->fb_unlink();
+    }
   } // initialize()
 
   /**
@@ -209,14 +205,12 @@ class DKOFBLogin extends DKOWPPlugin
    * do facebook login
    */
   private function fb_link() {
-    add_action(DKOFBLOGIN_SLUG.'_user_found',       array(&$this, 'wp_login_via_fbmeta'));
-    add_action(DKOFBLOGIN_SLUG.'_user_not_found',   array(&$this, 'associate_user_fbmeta'));
-    add_action(DKOFBLOGIN_SLUG.'_user_not_found',   array(&$this, 'register_new_user'));
     add_action(DKOFBLOGIN_SLUG.'_user_registered',  array(&$this, 'email_after_register'));
 
+    // user creation filters
+    add_filter(DKOFBLOGIN_SLUG.'_generate_user',      array(&$this, 'generate_user'));
     add_filter(DKOFBLOGIN_SLUG.'_username_available', array(&$this, 'username'));
-    add_filter(DKOFBLOGIN_SLUG.'_create_username',    array(&$this, 'create_username'));
-    add_filter('wp_mail_content_type', function() { return 'text/html'; });
+    add_filter(DKOFBLOGIN_SLUG.'_generate_username',  array(&$this, 'generate_username'));
 
     require_once dirname(__FILE__) . '/fb_link.php';
   } // fb_link()
@@ -226,8 +220,8 @@ class DKOFBLogin extends DKOWPPlugin
    * update token, login, redirect to profile
    */
   public function wp_login_via_fbmeta() {
-    if (!$this->user_data || !$this->fb_data || !$this->get_access_token()) { exit; }
-    $user_id = $this->user_data->ID;
+    if (!$this->current_user_data || !$this->fb_data || !$this->get_access_token()) { exit; }
+    $user_id = $this->current_user_data->ID;
     $this->setfbmeta($user_id, $this->fb_data->id, $this->get_access_token());
     $this->wp_login($user_id);
     $this->redirect($this->options['login_redirect'], admin_url('profile.php'));
@@ -247,15 +241,11 @@ class DKOFBLogin extends DKOWPPlugin
   } // associate_user_fbmeta()
 
   /**
-   * Generates a valid username
-   * Inserts a new user into the WordPress users table
-   * Runs hooks
-   * Logs user in
-   * Redirects user to registration page to continue filling out profile
+   * Default callback (priority 10) for dkofblogin_generate_user filter
+   * @return array user data formatted for wp_insert_user()
    */
-  public function register_new_user() {
-    $wp_userdata = array();
-
+  public function generate_user() {
+    $userdata = array();
     if (property_exists($this->fb_data, 'username')) {
       $username_prefix = $this->fb_data->username;
     }
@@ -265,14 +255,31 @@ class DKOFBLogin extends DKOWPPlugin
 
     // hook into this filter if you need to check usernames from any other
     // sources
-    $wp_userdata['user_login'] = apply_filters(
-      DKOFBLOGIN_SLUG.'create_username',
+    $userdata['user_login'] = apply_filters(
+      DKOFBLOGIN_SLUG.'_generate_username',
+      $userdata['user_login'],
       $username_prefix
     );
-    $wp_userdata['user_pass']   = wp_generate_password();
-    $wp_userdata['user_email']  = $this->fb_data->email;
-    $wp_userdata['first_name']  = $this->fb_data->first_name;
-    $wp_userdata['last_name']   = $this->fb_data->last_name;
+    $userdata['user_pass']   = wp_generate_password();
+    $userdata['user_email']  = $this->fb_data->email;
+    $userdata['first_name']  = $this->fb_data->first_name;
+    $userdata['last_name']   = $this->fb_data->last_name;
+    return $userdata;
+  } // generate_user()
+
+  /**
+   * Generates a valid username
+   * Inserts a new user into the WordPress users table
+   * Runs hooks
+   * Logs user in
+   * Redirects user to registration page to continue filling out profile
+   */
+  public function register_new_user() {
+    $wp_userdata = apply_filter(
+      DKOFBLOGIN_SLUG.'_generate_user',
+      $wp_userdata
+    );
+
     $user_id = wp_insert_user($wp_userdata);
     $this->setfbmeta($user_id, $this->fb_data->id, $this->get_access_token());
 
@@ -286,6 +293,9 @@ class DKOFBLogin extends DKOWPPlugin
     $this->redirect($this->options['register_redirect'], admin_url('profile.php'));
   } // register_new_user()
 
+  /**
+   * Default callback for dkofblogin_user_registered action
+   */
   public function email_after_register($user_args) {
     // email user with non-fb login details
     $message = '<p>Hi ' . $this->fb_data->name . ',</p>';
@@ -293,20 +303,15 @@ class DKOFBLogin extends DKOWPPlugin
     $message .= ' so we created an account for you. Keep this email for reference.</p>';
     $message .= '<p>You can always login via your linked Facebook account or use';
     $message .= ' the following username and password:</p><ul><li>';
-    $message .= "username: " . $wp_userdata['user_login'];
-    $message .= "</li><li>password: " . $wp_userdata['user_pass'] . '</li></ul>';
-
-    $message = apply_filters(
-      DKOFBLOGIN_SLUG.'_email_message',
-      $message
-    );
+    $message .= "username: " . $user_args['user_login'];
+    $message .= "</li><li>password: " . $user_args['user_pass'] . '</li></ul>';
+    $message = apply_filters(DKOFBLOGIN_SLUG.'_email_message', $message);
 
     $headers = 'From: ' . get_bloginfo('name') . ' <' . get_bloginfo('admin_email') . ">\r\n";
+    $headers = apply_filters(DKOFBLOGIN_SLUG.'_email_headers', $headers);
 
-    $headers = apply_filters(
-      DKOFBLOGIN_SLUG.'_email_headers',
-      $headers
-    );
+    // generic registration email filter
+    add_filter('wp_mail_content_type', function() { return 'text/html'; });
 
     wp_mail(
       $user_args['user_email'],
@@ -343,9 +348,9 @@ class DKOFBLogin extends DKOWPPlugin
     }
 
     // make sure user is only a subscriber
-    $this->user_data = get_userdata($user_id);
+    $this->current_user_data = get_userdata($user_id);
 
-    if (count($this->user_data->roles) > 1 && $this->user_data->roles[0] !== 'subscriber') {
+    if (count($this->current_user_data->roles) > 1 && $this->current_user_data->roles[0] !== 'subscriber') {
       return;
     }
 
@@ -354,7 +359,7 @@ class DKOFBLogin extends DKOWPPlugin
     wp_set_auth_cookie($user_id, true);
 
     // in case anything is hooked to real login function
-    do_action('wp_login', $this->user_data->user_login);
+    do_action('wp_login', $this->current_user_data->user_login);
   } // wp_login()
 
   /**
@@ -381,10 +386,9 @@ class DKOFBLogin extends DKOWPPlugin
    * Gets a WordPress user based on provided facebook id. If the user isn't
    * found by ID, try the user's email address.
    *
-   * @param object $fb_data fb data from graph api
    * @return object WordPress User object or false
    */
-  public function get_user_by_fbdata() {
+  public function get_user_by_fbid() {
     $user_query = new WP_User_Query(array(
       'meta_key'      => DKOFBLOGIN_USERMETA_KEY_FBID,
       'meta_value'    => $this->fb_data->id,
@@ -393,12 +397,17 @@ class DKOFBLogin extends DKOWPPlugin
     if ($user_query->total_users) {
       return $user_query->results[0];
     }
-
-    return get_user_by('email', $this->fb_data->email);
   } // get_user_by_fbdata()
 
   /**
-   * Callback for DKOFBLOGIN_SLUG.'_create_username' filter.
+   * @return object WordPress User object or false
+   */
+  public function get_user_by_fbemail() {
+    return get_user_by('email', $this->fb_data->email);
+  }
+
+  /**
+   * Callback for DKOFBLOGIN_SLUG.'_generate_username' filter.
    * Checks if $username is taken, if so add a number. Recurse until not taken.
    *
    * @TODO this could take a while, consider another method
@@ -407,10 +416,10 @@ class DKOFBLogin extends DKOWPPlugin
    * @param string $prefix    some number to append to the end of the username
    * @return string some valid untaken WordPress username
    */
-  public function create_username($username = '', $prefix = '') {
+  public function generate_username($username = '', $prefix = '') {
     if (!$username) {
       // @TODO wp_die($msg, $title, $args=array())
-      throw new Exception('create_username: username not specified');
+      throw new Exception('generate_username: username not specified');
     }
     // lazy sanitize username
     $username = preg_replace("/[^0-9a-zA-Z ]/m", '', $username);
@@ -418,7 +427,11 @@ class DKOFBLogin extends DKOWPPlugin
 
     // hook into this filter if you need to check another source for valid
     // usernames, return boolean $is_taken
-    $is_taken = apply_filter(DKOFBLOGIN_SLUG.'_username_available', $attempt);
+    $is_taken = apply_filter(
+      DKOFBLOGIN_SLUG.'_username_available',
+      $is_taken,
+      $attempt
+    );
 
     if (!$is_taken) { // this whole function/filter recurses until this is met
       return $attempt;
@@ -428,8 +441,8 @@ class DKOFBLogin extends DKOWPPlugin
       $prefix = 0;
     }
     $prefix = $prefix + 1;
-    return $this->create_username($username, $prefix);
-  } // create_username()
+    return $this->generate_username($username, $prefix);
+  } // generate_username()
 
   /**
    * @param string $username to check if exists in database

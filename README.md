@@ -1,12 +1,9 @@
 DKO FB Login
 ============
 
+**Original URL**: https://github.com/davidosomething/dko-fblogin
+
 WordPress plugin that integrates Facebook logins with the WordPress user system.
-Original URL: https://github.com/davidosomething/dko-fblogin
-
-
-Functionality
--------------
 
 When someone clicks the button, they will be logged in to their existing account
 if they already have an associated Facebook account.
@@ -18,43 +15,118 @@ FB's email confirmation mechanism to keep that secure).
 If they're missing both FB and WP accounts, a brand new WP account is created
 and linked to the FB ID.
 
+Hooks are provided to redefine how unique usernames are generated and what to
+do after registration or login.
 
 Requirements
 ------------
 
-* WordPress 3.3.1 (may be backwards compatible, but I'm not testing it)
-
+* WordPress 3.3+ (may be backwards compatible, but I'm not testing it)
+* CURL and OpenSSL installed on the server.
+* The plugin depends on URL rewriting, so make sure you have ```mod_rewrite```
+and .htaccess is writable by the server.
 
 Installation
 ------------
 
 1. Put this folder into the WordPress plugins folder
 2. Activate the plugin
-
-The plugin will create the appropriate tables.
-
+3. Configure the plugin from Settings > DKO FB Login
 
 Usage
 -----
 
-This plugin provides a shortcode to add the login button anywhere shortcodes
-work: ```` [dko-fblogin-button] ````
-If you want to use the button outside of a post field (e.g. in your theme) you
-can use the helper function: ```` dko_fblogin_button() ````
-That function just echoes out ```` do_shortcode('[dko-fblogin-button]') ````
+### Shortcodes
 
+``` [dko_fblogin_button] ```
 
-Developer Notes
----------------
+* Creates a login link.
 
 ### Methods provided
 
-In progress
+``` dko_fblogin_button() ``` 
 
-### Todo
+* Wrapper for ``` do_shortcode('[dko_fblogin_button]'); ```
 
-* Convert README into a WordPress AND GitHub compatible syntax
+### Action Hooks
+
+``` dkofblogin_user_found ```
+
+* User was found. The default hook logs the user in and redirects (terminating
+  the current state). If your hook does not redirect or exit, the default hook
+  will still happen.
+* param object of fb_data,
+* param string facebook access token
+* param object of user data for the WP User we found
+
+``` dkofblogin_user_not_found ```
+
+* User was found. The default hook logs the user in and redirects (terminating
+  the current state). If your hook does not redirect or exit, the default hook
+  will still happen.
+* param object of fb_data
+* param string facebook access token
+
+``` dkofblogin_user_registered ```
+
+* Run after registering a new user and setting the fb meta data for the user.
+
+``` wp_login ```
+
+* Run the WordPress login hooks after logging in a user via facebook. The hook
+  tag is provided by WordPress, but is used by this plugin.
+
+### Filter Hooks
+
+``` dkofblogin_find_user ```
+
+* return object WordPress user or false if user not found
+* Hook into this filter with higher priority than default if you want to check
+  another source for users. I.e., check twitter for that user, then create and
+  return a WP User based on that twitter user and you the FB ID will be
+  associated with that WP+Twitter user.
+* Default filters: get_user_by_fbid(), get_user_by_fbemail()
+
+``` dkofblogin_generate_user ```
+
+* return array of user data appropriate for use in ``` wp_insert_user() ```
+* Hook in with higher priority than default if you want to access the default
+  generated userdata. You can also just remove the default callback function
+  ``` dkofblogin_generate_user ``` if you have your own method of generating.
+
+``` dkofblogin_generate_username ```
+
+* return string a filtered unique username.
+* This filter tag is introduced in the ``` dkofblogin_generate_user() ```
+  function. Hook into this *early* (high priority) if you want to create a
+  username using some other method. Then, when the filter gets to the default
+  callback (priority 10), it will already have a unique username and just fall
+  through after sanitization.
+
+
+``` dkofblogin_username_available ```
+
+* return boolean, whether or not the username (provided as an argument) is
+available.
+* param string $username the username to check
+* Hook into this if you need to check multiple sources for username availability.
+
+``` dkofblogin_email_message ```
+
+* return string to email as the message body
+
+``` dkofblogin_email_headers ``` 
+
+* return string of email headers to send
+
+----
+
+Todo
+====
+
+* Handle expired access tokens
+* Terminate properly on error
 * Use wp_remote_get/post and fallback to curl on fail
   * why? Because you can specify SSL version 3 with curl
   * Check for stream wrappers before using curl
-
+* Convert README into a WordPress AND GitHub compatible syntax
