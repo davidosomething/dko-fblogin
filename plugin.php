@@ -205,6 +205,13 @@ class DKOFBLogin extends DKOWPPlugin
    * do facebook login
    */
   private function fb_link() {
+    // user source filters
+    add_filter(DKOFBLOGIN_SLUG.'_find_user', array(&$this, 'get_user_by_fbid'));
+    add_filter(DKOFBLOGIN_SLUG.'_find_user', array(&$this, 'get_user_by_fbemail'));
+
+    add_action(DKOFBLOGIN_SLUG.'_user_found',       array(&$this, 'wp_login_via_fbmeta'));
+    add_action(DKOFBLOGIN_SLUG.'_user_not_found',   array(&$this, 'associate_user_fbmeta'));
+    add_action(DKOFBLOGIN_SLUG.'_user_not_found',   array(&$this, 'register_new_user'));
     add_action(DKOFBLOGIN_SLUG.'_user_registered',  array(&$this, 'email_after_register'));
 
     // user creation filters
