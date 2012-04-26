@@ -1,5 +1,11 @@
 <?php
-if (!class_exists('DKOWPPluginFramework')):
+/**
+ * dko-fblogin/plugin.php
+ * The actual plugin class for DKOFBLogin
+ * This is also a parent class for DKOFBLogin_Admin
+ */
+
+if (!class_exists('DKOWPPlugin')):
   require_once dirname( __FILE__ ) . '/framework/base.php';
 endif;
 

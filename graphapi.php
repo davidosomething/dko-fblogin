@@ -8,9 +8,13 @@
  * @TODO just extend facebook's official SDK classes
  */
 
-class DKOFBLogin_Graph_API
+if (!class_exists('DKOWPPlugin_API')):
+  require_once dirname( __FILE__ ) . '/framework/api.php';
+endif;
+
+if (!class_exists('DKOFBLogin_Graph_API')):
+class DKOFBLogin_Graph_API extends DKOWPPlugin_API
 {
-  public $curlopts      = array();
   public $graph_baseurl = 'https://graph.facebook.com';
   protected $app_id     = '';
   protected $app_secret = '';
@@ -24,24 +28,30 @@ class DKOFBLogin_Graph_API
     $this->app_id     = $app_id;
     $this->app_secret = $app_secret;
 
-    if (!defined('SERVER_ENVIRONMENT') || in_array(SERVER_ENVIRONMENT, array('STAGE', 'PROD'))) {
-      $this->curlopts = array(
-        CURLOPT_SSL_VERIFYHOST => true,
-        CURLOPT_SSL_VERIFYPEER => true,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_SSLVERSION => 3 // fixes everything :D
-      );
-    }
-    elseif (in_array(SERVER_ENVIRONMENT, array('LOCAL', 'DEV'))) { // local or dev
-      $this->curlopts = array(
-        CURLOPT_SSL_VERIFYHOST  => false,
-        CURLOPT_SSL_VERIFYPEER  => false,
-        CURLOPT_RETURNTRANSFER  => true,
-        CURLOPT_SSLVERSION      => 3,
-        CURLOPT_VERBOSE         => 1
-      );
-    }
+    add_filter('dkowppplugin_api_after_request', array(&$this, 'make_certified_request'));
   } // __construct
+
+  /**
+   * make_certified_request
+   *
+   * This is a filter to specifically handle facebook CURL requests using
+   * DKOWPPlugin_API::make_request()
+   *
+   * @param mixed $result
+   * @param object $ch last used CURL handler
+   * @return void
+   */
+  public function make_certified_request($result) {
+    echo 'unc';
+    exit;
+    if (curl_errno($ch) == 60) { // CURLE_SSL_CACERT
+      // Invalid or no certificate authority found, using bundled information
+      curl_setopt_array($ch, $this->curlopts);
+      curl_setopt($ch, CURLOPT_CAINFO, dirname(__FILE__) . '/fb_ca_chain_bundle.crt');
+      $result = curl_exec($ch);
+    }
+    return $result;
+  }
 
   /**
    * Get user data associated with access_token
@@ -81,41 +91,10 @@ class DKOFBLogin_Graph_API
       'code'          => $_REQUEST['code']
     );
     $token_url  = $this->graph_baseurl.'/oauth/access_token?' . build_query($token_query);
-
     $result     = $this->make_request($token_url);
     // @TODO validate result!
-
     $cached_access_token = str_replace('access_token=', '', $result);
     return $cached_access_token;
   } // get_access_token()
-
-  /**
-   * make_request
-   *
-   * @TODO handle expired access tokens
-   * @param string $url
-   * @return string response
-   */
-  public function make_request($url) {
-    $ch = curl_init($url);
-    curl_setopt_array($ch, $this->curlopts);
-
-    $result = curl_exec($ch);
-
-    if (curl_errno($ch) == 60) { // CURLE_SSL_CACERT
-      // Invalid or no certificate authority found, using bundled information
-      curl_setopt_array($ch, $this->curlopts);
-      curl_setopt($ch, CURLOPT_CAINFO, dirname(__FILE__) . '/fb_ca_chain_bundle.crt');
-      $result = curl_exec($ch);
-    }
-
-    if (curl_errno($ch)) {
-      // @TODO wp_die($msg, $title, $args=array())
-      throw new Exception(curl_error($ch));
-    }
-
-    curl_close($ch);
-    return $result;
-  }
-
 } // end class
+endif;
