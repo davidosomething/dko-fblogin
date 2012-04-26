@@ -421,6 +421,9 @@ class DKOFBLogin extends DKOWPPlugin
    * @return object WP_User object or false
    */
   public function get_user_by_fbid($userdata) {
+    if (!$this->fb_data) {
+      throw new Exception('get_user_by_fbid: missing fbdata');
+    }
     if ($userdata) { return $userdata; }
     $user_query = new WP_User_Query(array(
       'meta_key'      => DKOFBLOGIN_USERMETA_KEY_FBID,

@@ -62,7 +62,7 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
       $access_token = $this->get_access_token();
     }
     $query  = build_query(array('access_token' => $access_token));
-    $url    = $this->graph_baseurl . "/$object?";
+    $url    = $this->graph_baseurl . "/$object";
     $result = $this->make_request($url, $query);
 
     // @TODO expects json, validate
@@ -95,7 +95,7 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
       'client_secret' => $this->app_secret,
       'code'          => $_REQUEST['code']
     ));
-    $url    = $this->graph_baseurl.'/oauth/access_token?';
+    $url    = $this->graph_baseurl.'/oauth/access_token';
     $result = $this->make_request($url, $query);
     // @TODO validate result!
     $cached_access_token = str_replace('access_token=', '', $result);
