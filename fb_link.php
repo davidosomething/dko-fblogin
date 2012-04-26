@@ -26,7 +26,7 @@ if ($_REQUEST['state'] != $_SESSION[DKOFBLOGIN_SLUG.'_state']) {
 
 /* ==|== Look for existing user by fb id ==================================== */
 if ($this->get_access_token()) {
-  $this->fb_data = dkofblogin_graphapi($this->get_access_token(), 'me');
+  $this->fb_data = $this->graphapi->get_object('me');
 }
 else {
   // @TODO wp_die($msg, $title, $args=array())
@@ -37,11 +37,12 @@ if (!$this->fb_data) { // got access token
   throw new Exception('Couldn\'t get or parse user data.');
 }
 
-$found_user_data = apply_filter(DKOFBLOGIN_SLUG.'_find_user');
+$found_user_data = null;
+$found_user_data = apply_filters(DKOFBLOGIN_SLUG.'_find_user', $found_user_data);
 
 // the following hooks need to redirect after completion!
 if ($found_user_data) { // found associated WordPress user
-  do_action(
+  do_action( // hooked actions should redirect, ending termination
     DKOFBLOGIN_SLUG.'_user_found',
     $this->fb_data,
     $this->get_access_token(),
@@ -52,7 +53,7 @@ else {
   // FB ID not found in meta data -- hook into this action with priority < 10 if
   // you want to authenticate from other sources before associating with an
   // existing user or creating a new user
-  do_action(
+  do_action( // hooked actions should redirect, ending termination
     DKOFBLOGIN_SLUG.'_user_not_found',
     $this->fb_data,
     $this->get_access_token()

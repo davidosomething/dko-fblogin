@@ -10,11 +10,8 @@ if (!class_exists('DKOFBLogin')) {
 }
 
 if (!class_exists('DKOFBLogin_Admin')):
-class DKOFBLogin_Admin extends DKOWPPlugin
+class DKOFBLogin_Admin extends DKOFBLogin
 {
-  protected $options    = '';
-  private $menu_hook    = '';
-
   // comes from here: https://developers.facebook.com/docs/authentication/permissions/
   private $available_permissions = array( 
     'user_about_me',
@@ -57,9 +54,8 @@ class DKOFBLogin_Admin extends DKOWPPlugin
     'publish_actions'
   );
 
-  public function __construct() {
-    parent::__construct(__FILE__);
-    $this->options = get_option(DKOFBLOGIN_OPTIONS_KEY);
+  public function __construct($plugin_file) {
+    parent::__construct($plugin_file); // run DKOFBLogin's construct
     add_action('admin_menu',          array(&$this, 'admin_menu'));
     add_action('admin_init',          array(&$this, 'admin_init'));
     add_action('admin_print_styles',  array(&$this, 'admin_print_styles'));
@@ -67,10 +63,12 @@ class DKOFBLogin_Admin extends DKOWPPlugin
     add_action('edit_user_profile',   array(&$this, 'user_profile_fields'), 10);
   }
 
-  /* create admin menu item */
+  /**
+   * create admin menu item
+   */
   public function admin_menu() {
     // admin options page
-    $this->menu_hook = add_options_page(
+    add_options_page(
       __(DKOFBLOGIN_PLUGIN_NAME . ' Options'),
       __(DKOFBLOGIN_PLUGIN_NAME),
       'manage_options',
@@ -79,18 +77,32 @@ class DKOFBLogin_Admin extends DKOWPPlugin
     );
   }
 
+  /**
+   * Add css to admin menu page
+   */
   public function admin_print_styles() {
-    wp_enqueue_style(DKOFBLOGIN_SLUG . '-admin', plugin_dir_url(__FILE__). 'css/admin.css');
+    wp_enqueue_style(
+      DKOFBLOGIN_SLUG . '-admin',
+      plugin_dir_url(__FILE__). 'css/admin.css'
+    );
   } // admin_print_styles()
 
 
-  /* callback function for add_options_page(), include html for admin options page */
+  /**
+   * callback function for add_options_page(),
+   * include html for admin options page
+   */
   public function admin_page() {
     echo $this->render('admin');
   }
 
-  /* set up options and populate admin menu */
+  /**
+   * Unlink all meta data if admin requested
+   * set up options and populate admin menu
+   */
   public function admin_init() {
+    $this->confirm_unlink_all();
+
     // create a new section on the page
     $section_slug = DKOFBLOGIN_SLUG.'_api';
     add_settings_section(
@@ -141,15 +153,8 @@ class DKOFBLogin_Admin extends DKOWPPlugin
     );
   }
 
-  /* @TODO: can make this portable, move to framework */
-  public function html_section_header_destroy($args) {
-    echo $this->render('admin-header-destroy');
-  }
-
-  /* @TODO: can make this portable, move to framework */
-  public function html_section_header_api($args) {
-    echo $this->render('admin-header');
-  }
+  public function html_section_header_destroy($args) { echo $this->render('admin-header-destroy'); }
+  public function html_section_header_api($args) { echo $this->render('admin-header'); }
 
   /* @TODO: can make this portable, move to framework */
   public function html_textfield($args) {
@@ -169,7 +174,7 @@ class DKOFBLogin_Admin extends DKOWPPlugin
    * html for the permissions checkboxes
    */
   public function html_field_confirm_destroy($args) {
-    $field_id = DKOFBLOGIN_SLUG . '-confirm_destroy';
+    $field_id = DKOFBLOGIN_SLUG . '-' . $args['field'];
     $field_name = DKOFBLOGIN_OPTIONS_KEY . '[' . $args['field'] . ']';
     echo '<label class="', DKOFBLOGIN_SLUG, '-confirm_destroy" for="', $field_id, '">';
     echo '<input id="', $field_id, '" name="' . $field_name . '" type="checkbox" value="1" />';
@@ -196,6 +201,7 @@ class DKOFBLogin_Admin extends DKOWPPlugin
 
   /**
    * input goes into here, comes out sanitized-ish
+   * @param array $input array of values from submitted options page form
    * @return function, returns array of sanitized input
    */
   public function sanitize_api_field($input) {
@@ -233,15 +239,12 @@ class DKOFBLogin_Admin extends DKOWPPlugin
 
   /**
    * show fb info on profile edit page
+   * @param object $user WP User data for profile page you're on
    */
   public function user_profile_fields($user) {
     if (get_current_user_id() !== $user->ID) { return; }
-    // @TODO don't assume access_token is valid
     $access_token = get_the_author_meta(DKOFBLOGIN_USERMETA_KEY_TOKEN, $user->ID);
-    $fb_data = false;
-    if ($access_token) {
-      $fb_data = dkofblogin_graphapi($access_token, 'me');
-    }
+    $fb_data = $access_token ? $this->graphapi->get_object('me', $access_token) : false;
     echo $this->render('admin-profile', $fb_data);
   }
 

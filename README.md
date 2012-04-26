@@ -64,6 +64,8 @@ Usage
 * User was found. The default hook logs the user in and redirects (terminating
   the current state). If your hook does not redirect or exit, the default hook
   will still happen.
+* Default hooks: associate_user_fbmeta() and register_new_user(), both redirect
+  upon completion.
 * param object of fb_data
 * param string facebook access token
 
@@ -80,19 +82,22 @@ Usage
 
 ``` dkofblogin_find_user ```
 
-* return object WordPress user or false if user not found
 * Hook into this filter with higher priority than default if you want to check
   another source for users. I.e., check twitter for that user, then create and
   return a WP User based on that twitter user and you the FB ID will be
   associated with that WP+Twitter user.
+* A good practice is to return the current $userdata if it already exists.
 * Default filters: get_user_by_fbid(), get_user_by_fbemail()
+* param $userdata is an object containing the found user's data.
+* return object WordPress user or false if user not found
 
 ``` dkofblogin_generate_user ```
 
-* return array of user data appropriate for use in ``` wp_insert_user() ```
 * Hook in with higher priority than default if you want to access the default
   generated userdata. You can also just remove the default callback function
   ``` dkofblogin_generate_user ``` if you have your own method of generating.
+* param $userdata array of user data to generate with
+* return array of user data appropriate for use in ``` wp_insert_user() ```
 
 ``` dkofblogin_generate_username ```
 
@@ -124,8 +129,10 @@ available.
 Todo
 ====
 
+* Namespace files
 * Handle expired access tokens
 * Terminate properly on error
+* uninstall.php that deletes options and stored user metadata
 * Use wp_remote_get/post and fallback to curl on fail
   * why? Because you can specify SSL version 3 with curl
   * Check for stream wrappers before using curl
