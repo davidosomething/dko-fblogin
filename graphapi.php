@@ -29,14 +29,15 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
     $this->app_id     = $app_id;
     $this->app_secret = $app_secret;
 
-    // add_filter('dkowppplugin_api_after_request', array(&$this, 'make_certified_request'), 10, 3);
+    add_filter('dkowppplugin_api_after_request', array(&$this, 'make_certified_request'), 10, 3);
   } // __construct
 
   /**
    * make_certified_request
    *
-   * This is a filter to specifically handle facebook CURL requests using
+   * This is a filter to specifically handle facebook cURL requests using
    * DKOWPPlugin_API::make_request()
+   * Adds a local certificate file if the first cURL request failed
    *
    * @param object $ch last used CURL handler
    * @param string $url the url last requested
@@ -46,8 +47,6 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
   public function make_certified_request($result, $ch, $url) {
     if (curl_errno($ch) == 60) { // CURLE_SSL_CACERT
       // Invalid or no certificate authority found, using bundled information
-      curl_setopt_array($ch, $this->curlopts);
-      curl_setopt($ch, CURLOPT_URL, $url);
       curl_setopt($ch, CURLOPT_CAINFO, dirname( __FILE__ ) . '/fb_ca_chain_bundle.crt');
       $result = curl_exec($ch);
     }
@@ -62,9 +61,9 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
     if (!$access_token) {
       $access_token = $this->get_access_token();
     }
-    $graph_query = array('access_token' => $access_token);
-    $graph_url  = $this->graph_baseurl."/$object?".build_query($graph_query);
-    $result     = $this->make_request($graph_url);
+    $query  = build_query(array('access_token' => $access_token));
+    $url    = $this->graph_baseurl . "/$object?";
+    $result = $this->make_request($url, $query);
 
     // @TODO expects json, validate
     $json_body  = json_decode($result);
@@ -90,14 +89,14 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
 
     // get a new access token
     // build_query will url encode params for you
-    $token_query = array(
+    $query = build_query(array(
       'client_id'     => $this->app_id,
       'redirect_uri'  => DKOFBLOGIN_ENDPOINT_URL,
       'client_secret' => $this->app_secret,
       'code'          => $_REQUEST['code']
-    );
-    $token_url  = $this->graph_baseurl.'/oauth/access_token?' . build_query($token_query);
-    $result     = $this->make_request($token_url);
+    ));
+    $url    = $this->graph_baseurl.'/oauth/access_token?';
+    $result = $this->make_request($url, $query);
     // @TODO validate result!
     $cached_access_token = str_replace('access_token=', '', $result);
     return $cached_access_token;
