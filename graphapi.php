@@ -25,10 +25,11 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
    * @return void
    */
   public function __construct($app_id, $app_secret) {
+    parent::__construct();
     $this->app_id     = $app_id;
     $this->app_secret = $app_secret;
 
-    add_filter('dkowppplugin_api_after_request', array(&$this, 'make_certified_request'));
+    // add_filter('dkowppplugin_api_after_request', array(&$this, 'make_certified_request'), 10, 3);
   } // __construct
 
   /**
@@ -37,17 +38,17 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
    * This is a filter to specifically handle facebook CURL requests using
    * DKOWPPlugin_API::make_request()
    *
-   * @param mixed $result
    * @param object $ch last used CURL handler
+   * @param string $url the url last requested
+   * @param mixed $result
    * @return void
    */
-  public function make_certified_request($result) {
-    echo 'unc';
-    exit;
+  public function make_certified_request($result, $ch, $url) {
     if (curl_errno($ch) == 60) { // CURLE_SSL_CACERT
       // Invalid or no certificate authority found, using bundled information
       curl_setopt_array($ch, $this->curlopts);
-      curl_setopt($ch, CURLOPT_CAINFO, dirname(__FILE__) . '/fb_ca_chain_bundle.crt');
+      curl_setopt($ch, CURLOPT_URL, $url);
+      curl_setopt($ch, CURLOPT_CAINFO, dirname( __FILE__ ) . '/fb_ca_chain_bundle.crt');
       $result = curl_exec($ch);
     }
     return $result;
@@ -80,6 +81,11 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
     static $cached_access_token;
     if ($cached_access_token) {
       return $cached_access_token;
+    }
+
+    if (!isset($_REQUEST['code'])) {
+      throw new Exception('Can\'t get access token: missing code from facebook');
+      exit;
     }
 
     // get a new access token

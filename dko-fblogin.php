@@ -12,21 +12,6 @@
  * http://www.facebook.com/ottopress
  *
  */
-
-if (!function_exists('curl_init')) {
-  throw new Exception('DKO FB Login requires the CURL PHP extension.');
-}
-if (!function_exists('json_decode')) {
-  throw new Exception('DKO FB Login requires the JSON PHP extension.');
-}
-
-/* @TODO check for stream wrappers
-$w = stream_get_wrappers();
-echo 'openssl: ',  extension_loaded  ('openssl') ? 'yes':'no', "\n";
-echo 'http wrapper: ', in_array('http', $w) ? 'yes':'no', "\n";
-echo 'https wrapper: ', in_array('https', $w) ? 'yes':'no', "\n";
-*/
-
 define('DKOFBLOGIN_PLUGIN_NAME',        'DKO FB Login');
 define('DKOFBLOGIN_PLUGIN_VERSION',     '1.5.2'); // med increment on add options/url rewrites
 define('DKOFBLOGIN_SLUG',               'dkofblogin');
