@@ -82,9 +82,8 @@ class DKOFBLogin_Graph_API
     );
     $token_url  = $this->graph_baseurl.'/oauth/access_token?' . build_query($token_query);
 
-    // expects a string
-    // @TODO validate stringyness
     $result     = $this->make_request($token_url);
+    // @TODO validate result!
 
     $cached_access_token = str_replace('access_token=', '', $result);
     return $cached_access_token;

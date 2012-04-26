@@ -128,11 +128,11 @@ class DKOFBLogin extends DKOWPPlugin
 
     add_action(DKOFBLOGIN_SLUG.'_user_found',       array(&$this, 'wp_login_via_fbmeta'),   10, 3);
     add_action(DKOFBLOGIN_SLUG.'_user_not_found',   array(&$this, 'associate_user_fbmeta'), 10, 2);
-    add_action(DKOFBLOGIN_SLUG.'_user_not_found',   array(&$this, 'register_new_user'),     10, 2);
+    add_action(DKOFBLOGIN_SLUG.'_user_not_found',   array(&$this, 'register_new_user'),     10, 0);
     add_action(DKOFBLOGIN_SLUG.'_user_registered',  array(&$this, 'email_after_register'),  10, 1);
 
     // user creation filters
-    add_filter(DKOFBLOGIN_SLUG.'_generate_user',      array(&$this, 'generate_user'),     10, 1);
+    add_filter(DKOFBLOGIN_SLUG.'_generate_user', array(&$this, 'generate_user_from_fbdata'), 10, 1);
     add_filter(DKOFBLOGIN_SLUG.'_username_available', 'username_exists', 10, 1); // WordPress function
     add_filter(DKOFBLOGIN_SLUG.'_generate_username',  array(&$this, 'generate_username'), 10, 2);
 
@@ -231,13 +231,19 @@ class DKOFBLogin extends DKOWPPlugin
 
 
   /**
-   * callback for user_found hook:
-   * update token, login, redirect to profile
+   * callback for user_found hook: update token, login, redirect to profile
+   *
+   * @param object $fbdata        json decoded facebook user data
+   * @param string $access_token  access token for this fb user
+   * @param object $userdata      WP_User to login as
    */
-  public function wp_login_via_fbmeta() {
-    if (!$this->current_user_data || !$this->fb_data || !$this->get_access_token()) { exit; }
-    $user_id = $this->current_user_data->ID;
-    $this->setfbmeta($user_id, $this->fb_data->id, $this->get_access_token());
+  public function wp_login_via_fbmeta($fb_data, $access_token, $userdata) {
+    if (!$fb_data || !$access_token || !$userdata) {
+      throw new Exception('missing userdata, fb data, or access token');
+      exit;
+    }
+    $user_id = $userdata->ID;
+    $this->setfbmeta($user_id, $fb_data->id, $access_token);
     $this->wp_login($user_id);
     $this->redirect($this->options['login_redirect'], admin_url('profile.php'));
     exit; // just in case
@@ -257,9 +263,12 @@ class DKOFBLogin extends DKOWPPlugin
 
   /**
    * Default callback (priority 10) for dkofblogin_generate_user filter
+   * Remove this filter if you want to generate userdata on your own
+   *
+   * @param array $userdata extra userdata, $generated takes precedence
    * @return array user data formatted for wp_insert_user()
    */
-  public function generate_user($userdata = array()) {
+  public function generate_user_from_fbdata($userdata = array()) {
     if (property_exists($this->fb_data, 'username')) {
       $username = $this->fb_data->username;
     }
@@ -268,15 +277,15 @@ class DKOFBLogin extends DKOWPPlugin
     }
 
     // hook into this filter if you need to check usernames from other sources
-    $userdata['user_login'] = apply_filters(
+    $generated['user_login'] = apply_filters(
       DKOFBLOGIN_SLUG.'_generate_username',
       $username
     );
-    $userdata['user_pass']   = wp_generate_password();
-    $userdata['user_email']  = $this->fb_data->email;
-    $userdata['first_name']  = $this->fb_data->first_name;
-    $userdata['last_name']   = $this->fb_data->last_name;
-    return $userdata;
+    $generated['user_pass']   = wp_generate_password();
+    $generated['user_email']  = $this->fb_data->email;
+    $generated['first_name']  = $this->fb_data->first_name;
+    $generated['last_name']   = $this->fb_data->last_name;
+    return array_merge($generated, $userdata);
   } // generate_user()
 
   /**
@@ -285,8 +294,10 @@ class DKOFBLogin extends DKOWPPlugin
    * Runs hooks
    * Logs user in
    * Redirects user to registration page to continue filling out profile
+   *
+   * @param array $userdata data for new user to register
    */
-  public function register_new_user($userdata) {
+  public function register_new_user($userdata = array()) {
     $userdata = apply_filters(
       DKOFBLOGIN_SLUG.'_generate_user',
       $userdata
@@ -307,25 +318,27 @@ class DKOFBLogin extends DKOWPPlugin
 
   /**
    * Default callback for dkofblogin_user_registered action
+   *
+   * @param array $userdata
    */
-  public function email_after_register($user_args) {
+  public function email_after_register($userdata) {
     // email user with non-fb login details
-    $message = '<p>Hi ' . $this->fb_data->name . ',</p>';
-    $message .= '<p>You logged in via Facebook on ' . bloginfo('name');
+    $message = '<p>Hi ' . $userdata['first_name'] . ' ' . $user_query['last_name'] . ',</p>';
+    $message .= '<p>You logged in via Facebook on ' . get_bloginfo('name');
     $message .= ' so we created an account for you. Keep this email for reference.</p>';
     $message .= '<p>You can always login via your linked Facebook account or use';
     $message .= ' the following username and password:</p><ul><li>';
-    $message .= "username: " . $user_args['user_login'];
-    $message .= "</li><li>password: " . $user_args['user_pass'] . '</li></ul>';
+    $message .= "username: " . $userdata['user_login'];
+    $message .= "</li><li>password: " . $userdata['user_pass'] . '</li></ul>';
     $message = apply_filters(DKOFBLOGIN_SLUG.'_email_message', $message);
 
     $headers = 'From: ' . get_bloginfo('name') . ' <' . get_bloginfo('admin_email') . ">\r\n";
     $headers = apply_filters(DKOFBLOGIN_SLUG.'_email_headers', $headers);
 
     // generic registration email filter
-    add_filter('wp_mail_content_type', function() { return 'text/html'; });
+    add_filter('wp_mail_content_type', function () { return 'text/html'; });
     wp_mail(
-      $user_args['user_email'],
+      $userdata['user_email'],
       'Your account on ' . get_bloginfo('name'),
       $message,
       $headers
@@ -334,9 +347,10 @@ class DKOFBLogin extends DKOWPPlugin
 
   /**
    * by using the update_user_meta we ensure only one FB acct per WP user
+   *
    * @param int     $user_id      WordPress user id
    * @param string  $fbid         Facebook user id
-   * @param string  $access_code  Facebook access code
+   * @param string  $access_token Facebook access token
    */
   private function setfbmeta($user_id = 0, $fbid = '', $access_token = '') {
     if (!$user_id) {
@@ -348,9 +362,9 @@ class DKOFBLogin extends DKOWPPlugin
   } // setfbmeta()
 
   /**
-   * log a user in to wordpress
-   * only logs in subscribers, just in case
-   * @param int $user_id  ID of user to login as
+   * log a user in to wordpress only if a subscriber
+   *
+   * @param int $user_id ID of user to login as
    */
   private function wp_login($user_id = 0) {
     if (!$user_id) {
@@ -358,18 +372,18 @@ class DKOFBLogin extends DKOWPPlugin
       throw new Exception('login: Invalid user_id');
     }
 
-    // make sure user is only a subscriber
+    // only log in if user is exclusively a subscriber
+    // i.e., no auto-login admins
     $this->current_user_data = get_userdata($user_id);
-
-    if (count($this->current_user_data->roles) > 1 && $this->current_user_data->roles[0] !== 'subscriber') {
+    $total_roles = count($this->current_user_data->roles);
+    $is_subscriber = $total_roles ? $this->current_user_data->roles[0] == 'subscriber' : false;
+    if ($total_roles > 1 || !$is_subscriber) {
       return;
     }
 
     // log the user in
     wp_set_current_user($user_id);
     wp_set_auth_cookie($user_id, true);
-
-    // in case anything is hooked to real login function
     do_action('wp_login', $this->current_user_data->user_login);
   } // wp_login()
 
@@ -395,10 +409,10 @@ class DKOFBLogin extends DKOWPPlugin
 
   /**
    * If already have a user, don't bother with this hook.
-   * Gets a WordPress user based on provided facebook id. If the user isn't
-   * found by ID, try the user's email address.
+   * Gets a WordPress user based on provided facebook id.
    *
-   * @return object WordPress User object or false
+   * @param object $userdata WP_User if already found or null
+   * @return object WP_User object or false
    */
   public function get_user_by_fbid($userdata) {
     if ($userdata) { return $userdata; }
@@ -407,20 +421,18 @@ class DKOFBLogin extends DKOWPPlugin
       'meta_value'    => $this->fb_data->id,
       'meta_compare'  => '='
     ));
-    if ($user_query->total_users) {
-      return $user_query->results[0];
-    }
+    if ($user_query->total_users) { return $user_query->results[0]; }
     return false;
   } // get_user_by_fbdata()
 
   /**
    * If already have a user, don't bother with this hook.
+   *
+   * @param object $userdata WP_User if already found or null
    * @return object WordPress User object or false
    */
   public function get_user_by_fbemail($userdata) {
-    if ($userdata) {
-      return $userdata;
-    }
+    if ($userdata) { return $userdata; }
     return get_user_by('email', $this->fb_data->email);
   }
 
@@ -439,7 +451,10 @@ class DKOFBLogin extends DKOWPPlugin
       // @TODO wp_die($msg, $title, $args=array())
       throw new Exception('generate_username: username not specified');
     }
-    $username = sanitize_user($username, true); // use WordPress' sanitization
+    // use WordPress' sanitization. We NEED to sanitize here because we compare
+    // the attempted username to existing usernames, which are all sanitized.
+    // So doesn't matter that wp_insert_user sanitizes again.
+    $username = sanitize_user($username, true);
     $attempt = $username . $prefix;
 
     // hook into this filter if you need to check another source for valid
@@ -449,21 +464,18 @@ class DKOFBLogin extends DKOWPPlugin
       $attempt
     );
 
-    if (!$is_taken) { // this whole function/filter recurses until this is met
-      return $attempt;
-    }
+    // this whole function/filter recurses until this is met
+    if (!$is_taken) { return $attempt; }
 
-    if (!$prefix) {
-      $prefix = 0;
-    }
-    $prefix = $prefix + 1;
-    return $this->generate_username($username, $prefix);
+    if (!$prefix) { $prefix = 0; }
+    return $this->generate_username($username, $prefix + 1);
   } // generate_username()
 
   /**
    * get_access_token
+   * checks already loaded if user id given
    *
-   * @param int $user_id
+   * @param int $user_id which user's token to get
    * @return string access token or false
    */
   public function get_access_token($user_id = 0) {

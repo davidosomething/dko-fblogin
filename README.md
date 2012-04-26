@@ -95,8 +95,8 @@ Usage
 
 * Hook in with higher priority than default if you want to access the default
   generated userdata. You can also just remove the default callback function
-  ``` dkofblogin_generate_user ``` if you have your own method of generating.
-* param $userdata array of user data to generate with
+  ``` generate_user_from_fbdata() ``` if you have your own method of generating.
+* param $userdata WP_User
 * return array of user data appropriate for use in ``` wp_insert_user() ```
 
 ``` dkofblogin_generate_username ```

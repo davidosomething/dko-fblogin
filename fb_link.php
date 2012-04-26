@@ -24,19 +24,10 @@ if ($_REQUEST['state'] != $_SESSION[DKOFBLOGIN_SLUG.'_state']) {
   throw new Exception('Invalid state, maybe CSRF');
 }
 
-/* ==|== Look for existing user by fb id ==================================== */
-if ($this->get_access_token()) {
-  $this->fb_data = $this->graphapi->get_object('me');
-}
-else {
-  // @TODO wp_die($msg, $title, $args=array())
-  throw new Exception('Couldn\'t get or parse access token.');
-}
-if (!$this->fb_data) { // got access token
-  // @TODO wp_die($msg, $title, $args=array())
-  throw new Exception('Couldn\'t get or parse user data.');
-}
-
+/**
+ * Get Facebook User Data and try to match with a WP_User
+ */
+$this->fb_data = $this->graphapi->get_object('me');
 $found_user_data = null;
 $found_user_data = apply_filters(DKOFBLOGIN_SLUG.'_find_user', $found_user_data);
 
@@ -50,8 +41,8 @@ if ($found_user_data) { // found associated WordPress user
   );
 }
 else {
-  // FB ID not found in meta data -- hook into this action with priority < 10 if
-  // you want to authenticate from other sources before associating with an
+  // FB ID not found in meta data -- hook into this action with priority < 10
+  // if you want to authenticate from other sources before associating with an
   // existing user or creating a new user
   do_action( // hooked actions should redirect, ending termination
     DKOFBLOGIN_SLUG.'_user_not_found',
