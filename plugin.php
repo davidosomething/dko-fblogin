@@ -132,7 +132,7 @@ class DKOFBLogin extends DKOWPPlugin
     add_filter(DKOFBLOGIN_SLUG.'_find_user', array(&$this, 'get_user_by_fbid'),     10, 2);
     add_filter(DKOFBLOGIN_SLUG.'_find_user', array(&$this, 'get_user_by_fbemail'),  10, 2);
 
-    add_action(DKOFBLOGIN_SLUG.'_user_found',       array(&$this, 'wp_login_via_fbmeta'),   10, 3);
+    add_action(DKOFBLOGIN_SLUG.'_user_found',       array(&$this, 'login_via_fbmeta'),   10, 3);
     add_action(DKOFBLOGIN_SLUG.'_user_not_found',   array(&$this, 'associate_user_fbmeta'), 10, 2);
     add_action(DKOFBLOGIN_SLUG.'_user_not_found',   array(&$this, 'register_new_user'),     10, 0);
     add_action(DKOFBLOGIN_SLUG.'_user_registered',  array(&$this, 'email_after_register'),  10, 1);
@@ -243,17 +243,17 @@ class DKOFBLogin extends DKOWPPlugin
    * @param string $access_token  access token for this fb user
    * @param object $userdata      WP_User to login as
    */
-  public function wp_login_via_fbmeta($fb_data, $access_token, $userdata) {
+  public function login_via_fbmeta($fb_data, $access_token, $userdata) {
     if (!$fb_data || !$access_token || !$userdata) {
       throw new Exception('missing userdata, fb data, or access token');
       exit;
     }
     $user_id = $userdata->ID;
     $this->setfbmeta($user_id, $fb_data->id, $access_token);
-    $this->wp_login($user_id);
+    $this->login($user_id);
     $this->redirect($this->options['login_redirect'], admin_url('profile.php'));
     exit; // just in case
-  } // wp_login_via_fbmeta()
+  } // login_via_fbmeta()
 
   /**
    * Callback for user_not_found hook
@@ -318,7 +318,7 @@ class DKOFBLogin extends DKOWPPlugin
     );
 
     // login user and redirect
-    $this->wp_login($user_id); // log in if subscriber
+    $this->login($user_id); // log in if subscriber
     $this->redirect($this->options['register_redirect'], admin_url('profile.php'));
   } // register_new_user()
 
@@ -372,7 +372,7 @@ class DKOFBLogin extends DKOWPPlugin
    *
    * @param int $user_id ID of user to login as
    */
-  private function wp_login($user_id = 0) {
+  private function login($user_id = 0) {
     if (!$user_id) {
       // @TODO wp_die($msg, $title, $args=array())
       throw new Exception('login: Invalid user_id');
@@ -391,7 +391,7 @@ class DKOFBLogin extends DKOWPPlugin
     wp_set_current_user($user_id);
     wp_set_auth_cookie($user_id, true);
     do_action('wp_login', $this->current_user_data->user_login);
-  } // wp_login()
+  } // login()
 
   /**
    * redirect to $location or $default with $status
