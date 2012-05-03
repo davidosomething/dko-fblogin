@@ -125,6 +125,17 @@ class DKOFBLogin_Admin extends DKOFBLogin
       'after' => 'Specify a URL to go to after logging in as a new facebook user (e.g., a registration page to capture additional data). Defaults to ' . admin_url('profile.php') . ' when blank.'
     ));
 
+    $section_slug = DKOFBLOGIN_SLUG.'_email';
+    add_settings_section(
+      $section_slug, 'Registration email confirmation',
+      array(&$this, 'html_section_header_email'),
+      DKOFBLOGIN_SLUG
+    );
+    add_settings_field(
+      'register_email', 'Email Body', array(&$this, 'html_field_email_body'),
+      DKOFBLOGIN_SLUG, $section_slug, array('field' => 'email_body')
+    );
+
     $section_slug = DKOFBLOGIN_SLUG.'_destroy';
     add_settings_section(
       $section_slug, 'Wipe all associated accounts',
@@ -153,8 +164,9 @@ class DKOFBLogin_Admin extends DKOFBLogin
     );
   }
 
-  public function html_section_header_destroy($args) { echo $this->render('admin-header-destroy'); }
-  public function html_section_header_api($args) { echo $this->render('admin-header'); }
+  public function html_section_header_api($args)      { echo $this->render('admin-header'); }
+  public function html_section_header_destroy($args)  { echo $this->render('admin-header-destroy'); }
+  public function html_section_header_email($args)    { echo $this->render('admin-header-email'); }
 
   /* @TODO: can make this portable, move to framework */
   public function html_textfield($args) {
@@ -171,12 +183,32 @@ class DKOFBLogin_Admin extends DKOFBLogin
   }
 
   /**
-   * html for the permissions checkboxes
+   * html for the registration email confirmation textarea
+   */
+  public function html_field_email_body($args) {
+    $field_id = DKOFBLOGIN_SLUG . '-' . $args['field'];
+    $field_name = DKOFBLOGIN_OPTIONS_KEY . '[' . $args['field'] . ']';
+    $email_body = array_key_exists('email_body', $this->options) ? $this->options['email_body'] : '';
+    echo '<textarea name="', $fieldname, '" rows="4" cols="32" id="dkofblogin_email_body">', $email_body, '</textarea>';
+
+    $dummy_userdata = array();
+    $dummy_userdata['first_name'] = 'FIRST_NAME';
+    $dummy_userdata['last_name']  = 'LAST_NAME';
+    $dummy_userdata['user_login'] = 'USERNAME';
+    $dummy_userdata['user_pass']  = 'PASSWORD';
+    $dummy_userdata['user_email'] = 'EMAIL@DOMAIN.COM';
+    $preview = $this->replace_email_tokens($email_body, $dummy_userdata);
+    echo '<h4 id="dkofblogin_email_preview_header">Preview</h4>';
+    echo '<div id="dkofblogin_email_preview">', $preview, '</div>';
+  } // html_field_permissions()
+
+  /**
+   * html for the destroy all fb data confirmation checkbox
    */
   public function html_field_confirm_destroy($args) {
     $field_id = DKOFBLOGIN_SLUG . '-' . $args['field'];
     $field_name = DKOFBLOGIN_OPTIONS_KEY . '[' . $args['field'] . ']';
-    echo '<label class="', DKOFBLOGIN_SLUG, '-confirm_destroy" for="', $field_id, '">';
+    echo '<label for="', $field_id, '">';
     echo '<input id="', $field_id, '" name="' . $field_name . '" type="checkbox" value="1" />';
     echo ' Confirm destruction of fblogin metadata?</label>';
   } // html_field_permissions()

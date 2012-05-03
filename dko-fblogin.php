@@ -13,7 +13,7 @@
  *
  */
 define('DKOFBLOGIN_PLUGIN_NAME',        'DKO FB Login');
-define('DKOFBLOGIN_PLUGIN_VERSION',     '1.5.2'); // med increment on add options/url rewrites
+define('DKOFBLOGIN_PLUGIN_VERSION',     '1.6.2'); // med increment on add options/url rewrites
 define('DKOFBLOGIN_SLUG',               'dkofblogin');
 define('DKOFBLOGIN_ENDPOINT_SLUG',      DKOFBLOGIN_SLUG . '-endpoint');
 define('DKOFBLOGIN_ENDPOINT_URL',       site_url('/' . DKOFBLOGIN_ENDPOINT_SLUG));

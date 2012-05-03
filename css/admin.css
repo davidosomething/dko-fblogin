@@ -13,6 +13,23 @@
   width: 16em;
 }
 
+#dkofblogin_email_body {
+  height: 10em;
+  max-width: 600px;
+  width: 100%;
+}
+#dkofblogin_email_preview_header {
+  margin: 1em 0 0;
+}
+#dkofblogin_email_preview {
+  background: #fafafa;
+  border: 1px solid #eee;
+  color: #444;
+  margin: 0;
+  max-width: 600px;
+  padding: 10px;
+  width: 100%;
+}
 
 /* ==|== Profile Edit Page ================================================== */
 #dkofblogin-associated-profile {

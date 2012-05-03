@@ -29,12 +29,17 @@ if ($_REQUEST['state'] != $_SESSION[DKOFBLOGIN_SLUG.'_state']) {
  */
 $this->fb_data = $this->graphapi->get_object('me');
 $found_user_data = null;
-$found_user_data = apply_filters(DKOFBLOGIN_SLUG.'_find_user', $found_user_data);
+$found_user_data = apply_filters(
+  DKOFBLOGIN_SLUG.'_find_user',
+  $found_user_data,
+  $this->fb_data
+);
 
 // the following hooks need to redirect after completion!
 if ($found_user_data) { // found associated WordPress user
   do_action( // hooked actions should redirect, ending termination
     DKOFBLOGIN_SLUG.'_user_found',
+    $found_user_data->ID,
     $this->fb_data,
     $this->get_access_token(),
     $found_user_data

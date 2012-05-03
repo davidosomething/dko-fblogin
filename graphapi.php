@@ -62,23 +62,34 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
       $access_token = $this->get_access_token();
     }
     $query  = build_query(array('access_token' => $access_token));
-    $url    = $this->graph_baseurl . "/$object";
-    $result = $this->make_request($url, $query);
+
+    $url = $this->graph_baseurl . "/$object";
+    $response = $this->make_request($url, $query);
+    $result = json_decode($response);
+
+    if (property_exists($result, 'error')) {
+      if ($result->error->type == 'OAuthException') {
+        $access_token = $this->get_access_token(false);
+        $query = build_query(array('access_token' => $access_token));
+        $response = $this->make_request($url, $query);
+        $result = json_decode($response);
+      }
+    }
 
     // @TODO expects json, validate
-    $json_body  = json_decode($result);
-    return $json_body;
+    return $result;
   } // graphapi_me
 
   /**
    * get_access_token
    *
+   * @param boolean $use_cached TRUE to use static cached token, false to renew
    * @return string access token
    */
-  public function get_access_token() {
+  public function get_access_token($use_cached = TRUE) {
     // use cached access token unless otherwise specified
     static $cached_access_token;
-    if ($cached_access_token) {
+    if ($use_cached && $cached_access_token) {
       return $cached_access_token;
     }
 
@@ -95,10 +106,10 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
       'client_secret' => $this->app_secret,
       'code'          => $_REQUEST['code']
     ));
-    $url    = $this->graph_baseurl.'/oauth/access_token';
-    $result = $this->make_request($url, $query);
+    $url      = $this->graph_baseurl.'/oauth/access_token';
+    $response = $this->make_request($url, $query);
     // @TODO validate result!
-    $cached_access_token = str_replace('access_token=', '', $result);
+    $cached_access_token = str_replace('access_token=', '', $response);
     return $cached_access_token;
   } // get_access_token()
 } // end class

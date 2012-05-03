@@ -12,17 +12,18 @@ endif;
 if (!class_exists('DKOFBLogin')):
 class DKOFBLogin extends DKOWPPlugin
 {
-  protected $graphapi;
+  public $graphapi;
 
   protected $options  = array();
   protected $defaults = array(
     'installed_version' => '0',
     'app_id'            => '',
     'app_secret'        => '',
-    'confirm_destroy'   => false,
     'permissions'       => array(),
     'login_redirect'    => '',
-    'register_redirect' => ''
+    'register_redirect' => '',
+    'email_body'        => '<p>Hi {first_name} {last_name},</p><p>You logged in via Facebook on <a href="{site_url}">{site_name}</a> so we created an account for you. Keep this email for reference.</p><p>You can always login via your linked Facebook account or use the following username and password:</p><ul><li><strong>username:</strong> {username}</li><li><strong>password:</strong> {password}</li></ul>',
+    'confirm_destroy'   => false,
   );
   protected $destroyed = false;
 
@@ -129,18 +130,18 @@ class DKOFBLogin extends DKOWPPlugin
    */
   private function fb_link() {
     // user source filters
-    add_filter(DKOFBLOGIN_SLUG.'_find_user', array(&$this, 'get_user_by_fbid'),     10, 2);
-    add_filter(DKOFBLOGIN_SLUG.'_find_user', array(&$this, 'get_user_by_fbemail'),  10, 2);
-
-    add_action(DKOFBLOGIN_SLUG.'_user_found',       array(&$this, 'login_via_fbmeta'),   10, 3);
-    add_action(DKOFBLOGIN_SLUG.'_user_not_found',   array(&$this, 'associate_user_fbmeta'), 10, 2);
-    add_action(DKOFBLOGIN_SLUG.'_user_not_found',   array(&$this, 'register_new_user'),     10, 0);
-    add_action(DKOFBLOGIN_SLUG.'_user_registered',  array(&$this, 'email_after_register'),  10, 1);
+    add_filter(DKOFBLOGIN_SLUG.'_find_user', array(&$this, 'get_user_by_fbid'),     10);
+    add_filter(DKOFBLOGIN_SLUG.'_find_user', array(&$this, 'get_user_by_fbemail'),  10);
 
     // user creation filters
-    add_filter(DKOFBLOGIN_SLUG.'_generate_user', array(&$this, 'generate_user_from_fbdata'), 10, 1);
-    add_filter(DKOFBLOGIN_SLUG.'_username_available', 'username_exists', 10, 1); // WordPress function
-    add_filter(DKOFBLOGIN_SLUG.'_generate_username',  array(&$this, 'generate_username'), 10, 2);
+    add_filter(DKOFBLOGIN_SLUG.'_generate_user', array(&$this, 'generate_user_from_fbdata'), 10);
+    add_filter(DKOFBLOGIN_SLUG.'_generate_username', array(&$this, 'generate_username'), 10, 2);
+    add_filter(DKOFBLOGIN_SLUG.'_email_message', array(&$this, 'replace_email_tokens'), 10, 2);
+
+    add_action(DKOFBLOGIN_SLUG.'_user_found',       array(&$this, 'login_via_fbmeta'),   10, 4);
+    add_action(DKOFBLOGIN_SLUG.'_user_not_found',   array(&$this, 'associate_user_fbmeta'), 10, 2);
+    add_action(DKOFBLOGIN_SLUG.'_user_not_found',   array(&$this, 'register_new_user'),     10, 0);
+    add_action(DKOFBLOGIN_SLUG.'_user_registered',  array(&$this, 'email_after_register'),  10, 4);
 
     require_once dirname( __FILE__ ) . '/fb_link.php';
   } // fb_link()
@@ -239,16 +240,12 @@ class DKOFBLogin extends DKOWPPlugin
   /**
    * callback for user_found hook: update token, login, redirect to profile
    *
-   * @param object $fbdata        json decoded facebook user data
-   * @param string $access_token  access token for this fb user
-   * @param object $userdata      WP_User to login as
+   * @param int     $user_id
+   * @param object  $fbdata        json decoded facebook user data
+   * @param string  $access_token  access token for this fb user
+   * @param object  $userdata      WP_User to login as
    */
-  public function login_via_fbmeta($fb_data, $access_token, $userdata) {
-    if (!$fb_data || !$access_token || !$userdata) {
-      throw new Exception('missing userdata, fb data, or access token');
-      exit;
-    }
-    $user_id = $userdata->ID;
+  public function login_via_fbmeta($user_id, $fb_data, $access_token, $userdata) {
     $this->setfbmeta($user_id, $fb_data->id, $access_token);
     $this->login($user_id);
     $this->redirect($this->options['login_redirect'], admin_url('profile.php'));
@@ -256,7 +253,7 @@ class DKOFBLogin extends DKOWPPlugin
   } // login_via_fbmeta()
 
   /**
-   * Callback for user_not_found hook
+   * Callback for user_not_found action hook #1
    * Check if user logged in, if so, associate fbdata and access token.
    */
   public function associate_user_fbmeta() {
@@ -292,10 +289,9 @@ class DKOFBLogin extends DKOWPPlugin
     $generated['first_name']  = $this->fb_data->first_name;
     $generated['last_name']   = $this->fb_data->last_name;
     return array_merge($generated, $userdata);
-  } // generate_user()
+  } // generate_user_from_fbdata()
 
   /**
-   * Generates a valid username
    * Inserts a new user into the WordPress users table
    * Runs hooks
    * Logs user in
@@ -314,6 +310,9 @@ class DKOFBLogin extends DKOWPPlugin
 
     do_action(
       DKOFBLOGIN_SLUG.'_user_registered',
+      $user_id,
+      $this->fb_data,
+      $this->get_access_token(),
       $userdata
     );
 
@@ -325,19 +324,14 @@ class DKOFBLogin extends DKOWPPlugin
   /**
    * Default callback for dkofblogin_user_registered action
    *
+   * @param object $fbdata
+   * @param string $access_token
    * @param array $userdata
    */
-  public function email_after_register($userdata) {
+  public function email_after_register($user_id, $fbdata, $access_token, $userdata) {
     // email user with non-fb login details
-    $message = '<p>Hi ' . $userdata['first_name'] . ' ' . $user_query['last_name'] . ',</p>';
-    $message .= '<p>You logged in via Facebook on ' . get_bloginfo('name');
-    $message .= ' so we created an account for you. Keep this email for reference.</p>';
-    $message .= '<p>You can always login via your linked Facebook account or use';
-    $message .= ' the following username and password:</p><ul><li>';
-    $message .= "username: " . $userdata['user_login'];
-    $message .= "</li><li>password: " . $userdata['user_pass'] . '</li></ul>';
-    $message = apply_filters(DKOFBLOGIN_SLUG.'_email_message', $message);
-
+    $message = $this->options['email_body'];
+    $message = apply_filters(DKOFBLOGIN_SLUG.'_email_message', $message, $userdata);
     $headers = 'From: ' . get_bloginfo('name') . ' <' . get_bloginfo('admin_email') . ">\r\n";
     $headers = apply_filters(DKOFBLOGIN_SLUG.'_email_headers', $headers);
 
@@ -350,6 +344,21 @@ class DKOFBLogin extends DKOWPPlugin
       $headers
     );
   } // email_after_register()
+
+  /**
+   * replace_email_tokens
+   *
+   * @param string $message
+   * @param object $fbdata
+   * @param string $access_token
+   * @param array $userdata
+   * @return string
+   */
+  public function replace_email_tokens($message, $userdata) {
+    $search   = array('{site_url}',   '{site_name}',        '{first_name}',           '{last_name}',          '{username}',             '{password}',           '{email}');
+    $replace  = array(site_url(),     get_bloginfo('name'), $userdata['first_name'],  $userdata['last_name'], $userdata['user_login'],  $userdata['user_pass'], $userdata['user_email']);
+    return str_replace($search, $replace, $message);
+  } // replace_email_tokens()
 
   /**
    * by using the update_user_meta we ensure only one FB acct per WP user
@@ -390,7 +399,7 @@ class DKOFBLogin extends DKOWPPlugin
     // log the user in
     wp_set_current_user($user_id);
     wp_set_auth_cookie($user_id, true);
-    do_action('wp_login', $this->current_user_data->user_login);
+    do_action('wp_login', $this->current_user_data->user_login, $this->current_user_data);
   } // login()
 
   /**
@@ -420,17 +429,19 @@ class DKOFBLogin extends DKOWPPlugin
    * @param object $userdata WP_User if already found or null
    * @return object WP_User object or false
    */
-  public function get_user_by_fbid($userdata) {
-    if (!$this->fb_data) {
+  public function get_user_by_fbid($user) {
+    if (!$this->fb_data || !$this->fb_data->id) {
       throw new Exception('get_user_by_fbid: missing fbdata');
     }
-    if ($userdata) { return $userdata; }
+    if ($user) { return $user; }
     $user_query = new WP_User_Query(array(
       'meta_key'      => DKOFBLOGIN_USERMETA_KEY_FBID,
-      'meta_value'    => $this->fb_data->id,
-      'meta_compare'  => '='
+      'meta_compare'  => '=',
+      'meta_value'    => $this->fb_data->id
     ));
-    if ($user_query->total_users) { return $user_query->results[0]; }
+    if ($user_query->total_users) {
+      return $user_query->results[0];
+    }
     return false;
   } // get_user_by_fbdata()
 
@@ -440,8 +451,10 @@ class DKOFBLogin extends DKOWPPlugin
    * @param object $userdata WP_User if already found or null
    * @return object WordPress User object or false
    */
-  public function get_user_by_fbemail($userdata) {
-    if ($userdata) { return $userdata; }
+  public function get_user_by_fbemail($user) {
+    if ($user) {
+      return $user;
+    }
     return get_user_by('email', $this->fb_data->email);
   }
 
@@ -466,11 +479,12 @@ class DKOFBLogin extends DKOWPPlugin
     $username = sanitize_user($username, true);
     $attempt = $username . $prefix;
 
+    $is_taken = username_exists($attempt);
     // hook into this filter if you need to check another source for valid
     // usernames, return boolean $is_taken
     $is_taken = apply_filters(
-      DKOFBLOGIN_SLUG.'_username_available',
-      $attempt
+      DKOFBLOGIN_SLUG.'_username_taken',
+      $is_taken, $attempt
     );
 
     // this whole function/filter recurses until this is met
