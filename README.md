@@ -50,6 +50,8 @@ Usage
 
 ### Action Hooks
 
+Here's an abridged flowchart of how this plugin works: [Flowchart PDF](http://dl.dropbox.com/u/3358149/dkofblogin.pdf)
+
 ``` dkofblogin_user_found ```
 
 * User was found. The default hook logs the user in and redirects (terminating
