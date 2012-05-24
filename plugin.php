@@ -47,7 +47,6 @@ class DKOFBLogin extends DKOWPPlugin
     add_action('init', array(&$this, 'html_channel_file'));
 
     $this->setup_options();
-    $this->setup_session();
     $this->check_update();
   } // __construct()
 
@@ -71,16 +70,6 @@ class DKOFBLogin extends DKOWPPlugin
       $this->graphapi = new DKOFBLogin_Graph_API($this->app_id, $this->app_secret);
     }
   } // setup_options()
-
-  /**
-   * start a session and generate a state nonce for FB API
-   */
-  private function setup_session() {
-    if (!isset($_SESSION)) { session_start(); }
-    if (empty($_REQUEST['code'])) { // don't generate new session state if have code
-      $_SESSION[DKOFBLOGIN_SLUG.'_state'] = md5(uniqid(rand(), TRUE)); //CSRF protection
-    }
-  } // setup_session()
 
   /**
    * Check to see if the plugin was updated, do maintenance
@@ -127,12 +116,18 @@ class DKOFBLogin extends DKOWPPlugin
     add_shortcode('dko-fblink-button',    array(&$this, 'html_shortcode_link_button'));
     add_shortcode('dko-fblogout-button',  array(&$this, 'html_shortcode_logout_button'));
 
+    if (!isset($_SESSION)) {
+      session_start();
+    }
     // @TODO check_nonce
     if (!empty($_REQUEST[DKOFBLOGIN_SLUG.'_link'])) {
       $this->fb_link();
     }
     elseif (!empty($_REQUEST[DKOFBLOGIN_SLUG.'_unlink'])) {
       $this->fb_unlink();
+    }
+    elseif (empty($_REQUEST['code'])) { // don't generate new session state if have code
+      $_SESSION[DKOFBLOGIN_SLUG.'_state'] = md5(uniqid(rand(), TRUE)); //CSRF protection
     }
   } // initialize()
 
