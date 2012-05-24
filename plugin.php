@@ -126,7 +126,8 @@ class DKOFBLogin extends DKOWPPlugin
     elseif (!empty($_REQUEST[DKOFBLOGIN_SLUG.'_unlink'])) {
       $this->fb_unlink();
     }
-    elseif (empty($_REQUEST['code'])) { // don't generate new session state if have code
+
+    if (empty($_SESSION[DKOFBLOGIN_SLUG.'_state']) && empty($_REQUEST['code'])) { // don't generate new session state if have code
       $_SESSION[DKOFBLOGIN_SLUG.'_state'] = md5(uniqid(rand(), TRUE)); //CSRF protection
     }
   } // initialize()
