@@ -30,6 +30,9 @@ class DKOFBLogin extends DKOWPPlugin
   protected $current_user_data = null;
   protected $fb_data           = null;
 
+  protected $app_id;
+  protected $app_secret;
+
   /**
    * run every time plugin loaded
    */
@@ -57,7 +60,15 @@ class DKOFBLogin extends DKOWPPlugin
       add_option(DKOFBLOGIN_OPTIONS_KEY, $this->defaults);
     }
     else {
-      $this->graphapi = new DKOFBLogin_Graph_API($this->options['app_id'], $this->options['app_secret']);
+      if (!defined('DKOFBLOGIN_APP_ID') || !defined('DKOFBLOGIN_APP_SECRET')) {
+        $this->app_id     = $this->options['app_id'];
+        $this->app_secret = $this->options['app_secret'];
+      }
+      else {
+        $this->app_id     = DKOFBLOGIN_APP_ID;
+        $this->app_secret = DKOFBLOGIN_APP_SECRET;
+      }
+      $this->graphapi = new DKOFBLogin_Graph_API($this->app_id, $this->app_secret);
     }
   } // setup_options()
 
@@ -134,8 +145,8 @@ class DKOFBLogin extends DKOWPPlugin
     add_filter(DKOFBLOGIN_SLUG.'_find_user', array(&$this, 'get_user_by_fbemail'),  10);
 
     // user creation filters
-    add_filter(DKOFBLOGIN_SLUG.'_generate_user', array(&$this, 'generate_user_from_fbdata'), 10);
     add_filter(DKOFBLOGIN_SLUG.'_generate_username', array(&$this, 'generate_username'), 10, 2);
+    add_filter(DKOFBLOGIN_SLUG.'_generate_user', array(&$this, 'generate_user_from_fbdata'), 10);
     add_filter(DKOFBLOGIN_SLUG.'_email_message', array(&$this, 'replace_email_tokens'), 10, 2);
 
     add_action(DKOFBLOGIN_SLUG.'_user_found',       array(&$this, 'login_via_fbmeta'),   10, 4);
@@ -161,7 +172,7 @@ class DKOFBLogin extends DKOWPPlugin
    */
   public function login_link() {
     $link_query = array(
-      'client_id'     => $this->options['app_id'],
+      'client_id'     => $this->app_id,
       'redirect_uri'  => DKOFBLOGIN_ENDPOINT_URL,
       'state'         => $_SESSION[DKOFBLOGIN_SLUG.'_state']
     );
@@ -211,7 +222,7 @@ class DKOFBLogin extends DKOWPPlugin
    */
   public function html_fbjs($args = array()) {
     $fbdefaults = array(
-      'appId'       => $this->options['app_id'],
+      'appId'       => $this->app_id,
       'channelUrl'  => home_url('?fbchannel=1'),
       'status'      => true,
       'cookie'      => true,
