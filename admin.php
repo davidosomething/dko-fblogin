@@ -176,9 +176,21 @@ class DKOFBLogin_Admin extends DKOFBLogin
     if (array_key_exists('pre', $args)) {
       echo $args['pre'];
     }
-    echo '<input id="', $field_id, '" type="text" name="', $field_name, '" value="', $field_value, '" size="40" />';
+    echo '<input id="', $field_id, '" type="text" name="', $field_name, '" value="', $field_value, '" size="40"';
+    $is_disabled = false;
+    if (
+      ($args['field'] == 'app_id' && defined('DKOFBLOGIN_APP_ID'))
+      || ($args['field'] == 'app_secret' && defined('DKOFBLOGIN_APP_SECRET'))
+    ) {
+      echo ' disabled="disabled"';
+      $is_disabled = true;
+    }
+    echo ' />';
     if (array_key_exists('after', $args)) {
       echo '<span class="description">', $args['after'], '</span>';
+    }
+    if ($is_disabled) {
+      echo '<span class="description">Overridden: DKOFBLOGIN_' . strtoupper($args['field']) . ' defined in wp-config.</span>';
     }
   }
 

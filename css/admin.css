@@ -6,6 +6,10 @@
   #dkofblogin input[type="text"] {
     margin-right: 0.5em;
   }
+  #dkofblogin input[disabled] {
+    background: #eee;
+  }
+
 
 .dkofblogin-permission {
   float: left;

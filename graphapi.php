@@ -61,7 +61,10 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
     if (!$access_token) {
       $access_token = $this->get_access_token();
     }
-    $query  = build_query(array('access_token' => $access_token));
+    if (!$access_token) {
+      return false;
+    }
+    $query = build_query(array('access_token' => $access_token));
 
     $url = $this->graph_baseurl . "/$object";
     $response = $this->make_request($url, $query);
@@ -94,8 +97,11 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
     }
 
     if (!isset($_REQUEST['code'])) {
+      return false;
+      /*
       throw new Exception('Can\'t get access token: missing code from facebook');
       exit;
+       */
     }
 
     // get a new access token
