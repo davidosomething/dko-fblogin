@@ -61,8 +61,9 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
     if (!$access_token) {
       $access_token = $this->get_access_token();
     }
+    // still no access token
     if (!$access_token) {
-      return false;
+      return null;
     }
     $query = build_query(array('access_token' => $access_token));
 
@@ -72,7 +73,7 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
 
     if (property_exists($result, 'error')) {
       if ($result->error->type == 'OAuthException') {
-        $access_token = $this->get_access_token(false);
+        $access_token = $this->get_access_token(false); // may have used an expired cached access token
         $query = build_query(array('access_token' => $access_token));
         $response = $this->make_request($url, $query);
         $result = json_decode($response);
@@ -96,15 +97,13 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
       return $cached_access_token;
     }
 
-    if (!isset($_REQUEST['code'])) {
+    // when we go to the auth dialog, facebook redirects us back to our endpoint
+    // with a code. we trade the code for an access token
+    if (empty($_REQUEST['code'])) {
       return false;
-      /*
-      throw new Exception('Can\'t get access token: missing code from facebook');
-      exit;
-       */
     }
 
-    // get a new access token
+    // exchange the code for a new access token
     // build_query will url encode params for you
     $query = build_query(array(
       'client_id'     => $this->app_id,
