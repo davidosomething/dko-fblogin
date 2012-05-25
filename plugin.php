@@ -163,23 +163,6 @@ class DKOFBLogin extends DKOWPPlugin
     return '';
   } // permissions_list()
 
-  /**
-   * @return string link to login via facebook
-   */
-  public function login_link() {
-    $link_query = array(
-      'client_id'     => $this->app_id,
-      'redirect_uri'  => DKOFBLOGIN_ENDPOINT_URL,
-      'state'         => $_SESSION[DKOFBLOGIN_SLUG.'_state']
-    );
-    if (array_key_exists('permissions', $this->options)) {
-      $link_query['scope'] = implode(',', $this->options['permissions']);
-    }
-
-    // build_query does urlencoding.
-    $link = 'https://www.facebook.com/dialog/oauth?' . build_query($link_query);
-    return $link;
-  } // login_link()
 
   /**
    * Shows a login link
@@ -189,7 +172,7 @@ class DKOFBLogin extends DKOWPPlugin
     if (is_user_logged_in()) {
       return '';
     }
-    return '<a class="dko-fblogin-loginout" href="' . $this->login_link() . '">Login through facebook</a>';
+    return '<a class="dko-fblogin-loginout" href="' . $this->graphapi->login_link() . '">Login through facebook</a>';
   } // login_button_shortcode()
 
   /**
@@ -197,7 +180,7 @@ class DKOFBLogin extends DKOWPPlugin
    * the user's profile if already logged in
    */
   public function html_shortcode_link_button($atts) {
-    return '<a class="dko-fblogin-login" href="' . $this->login_link() . '">Login to facebook and link this account</a>';
+    return '<a class="dko-fblogin-login" href="' . $this->graphapi->login_link() . '">Login to facebook and link this account</a>';
   } // link_button_shortcode()
 
   /**
