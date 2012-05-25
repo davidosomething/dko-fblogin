@@ -21,18 +21,17 @@ if (array_key_exists('error', $_REQUEST)) {
 }
 elseif (empty($_REQUEST['state']) || empty($_SESSION[DKOFBLOGIN_SLUG.'_state'])) {
   echo '<h1>Error: Missing state</h1>';
-  echo '<p><a href="', $this->graphapi->login_link(), '">Click here to try again, accept the terms this time!</a></p>';
   $is_invalid_request = true;
 }
 elseif ($_REQUEST['state'] != $_SESSION[DKOFBLOGIN_SLUG.'_state']) {
   echo '<h1>Error: Invalid state</h1>';
-  echo '<p><a href="', $this->graphapi->login_link(), '">Click here to try again, accept the terms this time!</a></p>';
   $is_invalid_request = true;
 }
 
-if (!$is_invalid_request)
+if ($is_invalid_request) {
   echo '<p><a href="', $this->graphapi->login_link(), '">Click here to try again, accept the terms this time!</a></p>';
   exit;
+}
 
 /**
  * Get Facebook User Data and try to match with a WP_User
