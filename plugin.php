@@ -228,28 +228,39 @@ class DKOFBLogin extends DKOWPPlugin
 
 
   /**
+   * login_via_fbmeta
+   *
    * callback for user_found hook: update token, login, redirect to profile
    *
    * @param int     $user_id
    * @param object  $fbdata        json decoded facebook user data
    * @param string  $access_token  access token for this fb user
    * @param object  $userdata      WP_User to login as
+   * @return void
    */
   public function login_via_fbmeta($user_id, $fb_data, $access_token, $userdata) {
     $this->setfbmeta($user_id, $fb_data->id, $access_token);
     $this->login($user_id);
+
+    do_action(DKOFBLOGIN_SLUG.'_after_login'); // in case you want to do a custom redirect
     $this->redirect($this->options['login_redirect'], admin_url('profile.php'));
     exit; // just in case
   } // login_via_fbmeta()
 
   /**
+   * associate_user_fbmeta
+   *
    * Callback for user_not_found action hook #1
    * Check if user logged in, if so, associate fbdata and access token.
+   *
+   * @return void
    */
   public function associate_user_fbmeta() {
     $user_id = get_current_user_id();
     if (!$user_id) { return; }
     $this->setfbmeta($user_id, $this->fb_data->id, $this->get_access_token());
+
+    do_action(DKOFBLOGIN_SLUG.'_after_associate'); // in case you want to do a custom redirect
     $this->redirect($this->options['login_redirect'], admin_url('profile.php'));
     exit; // just in case
   } // associate_user_fbmeta()
@@ -282,12 +293,15 @@ class DKOFBLogin extends DKOWPPlugin
   } // generate_user_from_fbdata()
 
   /**
+   * register_new_user
+   *
    * Inserts a new user into the WordPress users table
    * Runs hooks
    * Logs user in
    * Redirects user to registration page to continue filling out profile
    *
    * @param array $userdata data for new user to register
+   * @return void
    */
   public function register_new_user($userdata = array()) {
     $userdata = apply_filters(
@@ -308,6 +322,8 @@ class DKOFBLogin extends DKOWPPlugin
 
     // login user and redirect
     $this->login($user_id); // log in if subscriber
+
+    do_action(DKOFBLOGIN_SLUG.'_after_register');
     $this->redirect($this->options['register_redirect'], admin_url('profile.php'));
   } // register_new_user()
 
@@ -511,6 +527,8 @@ class DKOFBLogin extends DKOWPPlugin
       $user_id = get_current_user_id();
       $this->setfbmeta($user_id, '', '');
     }
+
+    do_action(DKOFBLOGIN_SLUG.'_after_unlink');
     $this->redirect($this->options['login_redirect'], admin_url('profile.php'));
   } // fb_unlink()
 

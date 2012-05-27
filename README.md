@@ -75,6 +75,22 @@ Here's an abridged flowchart of how this plugin works: [Flowchart PDF](http://dl
 
 * Run after registering a new user and setting the fb meta data for the user.
 
+``` dkofblogin_after_login ```
+
+* Run after login via fbmeta
+
+``` dkofblogin_after_associate ```
+
+* Run after associating existing user with FB account
+
+``` dkofblogin_after_register ```
+
+* Run after registering user using FB account and logging them in
+
+``` dkofblogin_after_unlink ```
+
+* Run after unlink FB acct from WP user
+
 ``` wp_login ```
 
 * Run the WordPress login hooks after logging in a user via facebook. The hook
