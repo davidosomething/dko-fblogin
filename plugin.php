@@ -57,6 +57,7 @@ class DKOFBLogin extends DKOWPPlugin
     $this->options = get_option(DKOFBLOGIN_OPTIONS_KEY);
     if ($this->options === false) {
       add_option(DKOFBLOGIN_OPTIONS_KEY, $this->defaults);
+      $this->options = $this->defaults;
     }
     else {
       if (!defined('DKOFBLOGIN_APP_ID') || !defined('DKOFBLOGIN_APP_SECRET')) {
