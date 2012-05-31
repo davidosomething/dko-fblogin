@@ -14,8 +14,15 @@ if (@!get_class($this)) {
 
 $is_invalid_request = false;
 if (array_key_exists('error', $_REQUEST)) {
-  echo '<h1>Error: ', urldecode(filter_var($_REQUEST['error'], FILTER_SANITIZE_STRING)), '</h1>';
-  echo '<h2>Reason: ', urldecode(filter_var($_REQUEST['error_reason'], FILTER_SANITIZE_STRING)), '</h2>';
+  $error = urldecode(filter_var($_REQUEST['error'], FILTER_SANITIZE_STRING));
+  if ($error == 'access_denied') {
+    header('location: https://facebook.com');
+    exit;
+  }
+
+  $reason = urldecode(filter_var($_REQUEST['error_reason'], FILTER_SANITIZE_STRING));
+  echo '<h1>Error: ', $error, '</h1>';
+  echo '<h2>Reason: ', $reason, '</h2>';
   echo '<p>', urldecode(filter_var($_REQUEST['error_description'], FILTER_SANITIZE_STRING)), '</p>';
   $is_invalid_request = true;
 }

@@ -118,11 +118,14 @@ class DKOFBLogin_Admin extends DKOFBLogin
       'permissions', 'Permissions', array(&$this, 'html_field_permissions'),
       DKOFBLOGIN_SLUG, $section_slug, array('field' => 'permissions')
     );
+    $this->add_settings_textfield($section_slug, 'Denial Redirect', array(
+      'after' => 'Specify a relative URL to go to if the user rejects authorization of the app. Defaults to debugging error message!'
+    ));
     $this->add_settings_textfield($section_slug, 'Login Redirect', array(
-      'after' => 'Specify a URL to go to after logging in (e.g., user profile\'s page). Defaults to ' . admin_url('profile.php') . ' when blank.'
+      'after' => 'Specify a relative URL to go to after logging in (e.g., user profile\'s page). Defaults to ' . admin_url('profile.php') . ' when blank.'
     ));
     $this->add_settings_textfield($section_slug, 'Register Redirect', array(
-      'after' => 'Specify a URL to go to after logging in as a new facebook user (e.g., a registration page to capture additional data). Defaults to ' . admin_url('profile.php') . ' when blank.'
+      'after' => 'Specify a relative URL to go to after logging in as a new facebook user (e.g., a registration page to capture additional data). Defaults to ' . admin_url('profile.php') . ' when blank.'
     ));
 
     $section_slug = DKOFBLOGIN_SLUG.'_email';

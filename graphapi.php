@@ -102,8 +102,8 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
 
     // the result is an error, may have used an expired cached access token
     // try again, refreshing the user's access token in the process
-    if (property_exists($result, 'error')) {
-      if ($result->error->type == 'OAuthException') {
+    if (!is_object($result) || property_exists($result, 'error')) {
+      if (!is_object($result) || $result->error->type == 'OAuthException') {
         $access_token = $this->get_access_token(FALSE);
         $query        = build_query(array('access_token' => $access_token));
         $response     = $this->make_request($url, $query);

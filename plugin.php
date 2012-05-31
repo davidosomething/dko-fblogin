@@ -20,6 +20,7 @@ class DKOFBLogin extends DKOWPPlugin
     'app_id'            => '',
     'app_secret'        => '',
     'permissions'       => array(),
+    'denial_redirect'   => '',
     'login_redirect'    => '',
     'register_redirect' => '',
     'email_body'        => '<p>Hi {first_name} {last_name},</p><p>You logged in via Facebook on <a href="{site_url}">{site_name}</a> so we created an account for you. Keep this email for reference.</p><p>You can always login via your linked Facebook account or use the following username and password:</p><ul><li><strong>username:</strong> {username}</li><li><strong>password:</strong> {password}</li></ul>',
@@ -274,6 +275,10 @@ class DKOFBLogin extends DKOWPPlugin
    * @return array user data formatted for wp_insert_user()
    */
   public function generate_user_from_fbdata($userdata = array()) {
+    if (!is_object($this->fb_data)) {
+      return $userdata;
+    }
+
     if (property_exists($this->fb_data, 'username')) {
       $username = $this->fb_data->username;
     }
