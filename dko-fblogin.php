@@ -16,9 +16,9 @@ define('DKOFBLOGIN_PLUGIN_NAME',        'DKO FB Login');
 define('DKOFBLOGIN_PLUGIN_VERSION',     '1.6.2'); // med increment on add options/url rewrites
 define('DKOFBLOGIN_SLUG',               'dkofblogin');
 define('DKOFBLOGIN_ENDPOINT_SLUG',      DKOFBLOGIN_SLUG . '-endpoint');
-define('DKOFBLOGIN_ENDPOINT_URL',       site_url('/' . DKOFBLOGIN_ENDPOINT_SLUG));
+define('DKOFBLOGIN_ENDPOINT_URL',       home_url('/' . DKOFBLOGIN_ENDPOINT_SLUG));
 define('DKOFBLOGIN_DEAUTHORIZE_SLUG',   DKOFBLOGIN_SLUG . '-deauthorize');
-define('DKOFBLOGIN_DEAUTHORIZE_URL',    site_url('/' . DKOFBLOGIN_DEAUTHORIZE_SLUG));
+define('DKOFBLOGIN_DEAUTHORIZE_URL',    home_url('/' . DKOFBLOGIN_DEAUTHORIZE_SLUG));
 define('DKOFBLOGIN_OPTIONS_KEY',        DKOFBLOGIN_SLUG . '_options');
 define('DKOFBLOGIN_USERMETA_KEY_FBID',  DKOFBLOGIN_SLUG . '_fbid');
 define('DKOFBLOGIN_USERMETA_KEY_TOKEN', DKOFBLOGIN_SLUG . '_token');

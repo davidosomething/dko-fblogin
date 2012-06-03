@@ -368,7 +368,7 @@ class DKOFBLogin extends DKOWPPlugin
    */
   public function replace_email_tokens($message, $userdata) {
     $search   = array('{site_url}',   '{site_name}',        '{first_name}',           '{last_name}',          '{username}',             '{password}',           '{email}');
-    $replace  = array(site_url(),     get_bloginfo('name'), $userdata['first_name'],  $userdata['last_name'], $userdata['user_login'],  $userdata['user_pass'], $userdata['user_email']);
+    $replace  = array(home_url(),     get_bloginfo('name'), $userdata['first_name'],  $userdata['last_name'], $userdata['user_login'],  $userdata['user_pass'], $userdata['user_email']);
     return str_replace($search, $replace, $message);
   } // replace_email_tokens()
 

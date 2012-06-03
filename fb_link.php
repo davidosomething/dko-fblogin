@@ -87,6 +87,6 @@ else {
 }
 
 // 403 unauthorized, shouldn't ever get to this point
-header('location: ' . site_url(), true, 403); exit;
+header('location: ' . home_url(), true, 403); exit;
 
 /* } private function fb_link() */
