@@ -162,7 +162,7 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
     try {
       $response = $this->make_request($url, $query);
     }
-    catch {
+    catch (Exception $e) {
       return false;
     }
 
