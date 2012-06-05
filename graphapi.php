@@ -97,8 +97,14 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
     // ok have an access token, make the request
     $query    = build_query(array('access_token' => $access_token));
     $url      = $this->graph_baseurl . "/$object";
-    $response = $this->make_request($url, $query);
-    $result   = json_decode($response);
+
+    try {
+      $response = $this->make_request($url, $query);
+      $result   = json_decode($response);
+    }
+    catch (Exception $e) {
+      $result   = null;
+    }
 
     // the result is an error, may have used an expired cached access token
     // try again, refreshing the user's access token in the process
@@ -106,8 +112,14 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
       if (!is_object($result) || $result->error->type == 'OAuthException') {
         $access_token = $this->get_access_token(FALSE);
         $query        = build_query(array('access_token' => $access_token));
-        $response     = $this->make_request($url, $query);
-        $result       = json_decode($response);
+
+        try {
+          $response     = $this->make_request($url, $query);
+          $result       = json_decode($response);
+        }
+        catch (Exception $e) {
+          $result = null;
+        }
       }
     }
 
@@ -147,7 +159,12 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
       'code'          => $_REQUEST['code']
     ));
     $url      = $this->graph_baseurl . '/oauth/access_token';
-    $response = $this->make_request($url, $query);
+    try {
+      $response = $this->make_request($url, $query);
+    }
+    catch {
+      return false;
+    }
 
     // @TODO validate result!
     $cached_access_token = str_replace('access_token=', '', $response);
