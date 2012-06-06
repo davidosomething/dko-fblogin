@@ -63,6 +63,11 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
    * @return string link to login via facebook
    */
   public function login_link($redirect_uri = DKOFBLOGIN_ENDPOINT_URL) {
+    // @TODO guarantee state in session -- is this ok?
+    if (empty($_SESSION[DKOFBLOGIN_SLUG.'_state'])) {
+      $_SESSION[DKOFBLOGIN_SLUG.'_state'] = md5(uniqid(rand(), TRUE)); //CSRF protection
+    }
+
     $options = get_option(DKOFBLOGIN_OPTIONS_KEY);
     $link_query = array(
       'client_id'     => $this->app_id,
