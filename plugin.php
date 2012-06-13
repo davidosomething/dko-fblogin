@@ -114,9 +114,7 @@ class DKOFBLogin extends DKOWPPlugin
       add_action('wp_footer',           array(&$this, 'html_fbjs'), 20);
     }
 
-    add_shortcode('dko-fblogin-button',   array(&$this, 'html_shortcode_login_button'));
-    add_shortcode('dko-fblink-button',    array(&$this, 'html_shortcode_link_button'));
-    add_shortcode('dko-fblogout-button',  array(&$this, 'html_shortcode_logout_button'));
+    add_shortcode('dkofblogin-button',   array(&$this, 'html_shortcode_login_button'));
 
     if (!isset($_SESSION)) {
       session_start();
@@ -163,30 +161,25 @@ class DKOFBLogin extends DKOWPPlugin
 
 
   /**
-   * Shows a login link
+   * login_link
+   *
+   * @return string href for facebook login link
+   */
+  public function login_link() {
+    return $this->graphapi->login_link();
+  }
+
+  /**
+   * Shows a login button
    * @return string html link for facebook login
    */
   public function html_shortcode_login_button($atts) {
     if (is_user_logged_in()) {
       return '';
     }
-    return '<a class="dko-fblogin-loginout" href="' . $this->graphapi->login_link() . '">Login through facebook</a>';
+    return '<a class="dko-fblogin-loginout" href="' . $this->login_link() . '">Login through facebook</a>';
   } // login_button_shortcode()
 
-  /**
-   * This is ALWAYS a link to auth, as opposed to the login button which shows
-   * the user's profile if already logged in
-   */
-  public function html_shortcode_link_button($atts) {
-    return '<a class="dko-fblogin-login" href="' . $this->graphapi->login_link() . '">Login to facebook and link this account</a>';
-  } // link_button_shortcode()
-
-  /**
-   * This is always a link to logout (but not deauthorize) from facebook
-   */
-  public function html_shortcode_logout_button($atts) {
-    return '';
-  } // logout_button_shortcode()
 
   // fix up the html tag to have the FBML extensions
   public function html_fb_language_attributes($lang) {

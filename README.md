@@ -44,9 +44,9 @@ Usage
 
 ### Methods provided
 
-``` dko_fblogin_button() ``` 
+``` dkofblogin_button() ``` 
 
-* Wrapper for ``` do_shortcode('[dko_fblogin_button]'); ```
+* Wrapper for ``` do_shortcode('[dkofblogin_button]'); ```
 
 ### Action Hooks
 
