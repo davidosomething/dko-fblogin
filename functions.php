@@ -8,5 +8,6 @@ function dkofblogin_button() {
 }
 
 function dkofblogin_link() {
+  global $dkofblogin;
   echo $dkofblogin->login_link();
 }
