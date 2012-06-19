@@ -71,6 +71,17 @@ class DKOFBLogin extends DKOWPPlugin
       }
       $this->graphapi = new DKOFBLogin_Graph_API($this->app_id, $this->app_secret);
     }
+
+    // override redirect values with constants
+    if (defined('DKOFBLOGIN_LOGIN_REDIRECT')) {
+      $this->options['login_redirect'] = DKOFBLOGIN_LOGIN_REDIRECT;
+    }
+    if (defined('DKOFBLOGIN_REGISTER_REDIRECT')) {
+      $this->options['register_redirect'] = DKOFBLOGIN_REGISTER_REDIRECT;
+    }
+    if (defined('DKOFBLOGIN_DENIAL_REDIRECT')) {
+      $this->options['denial_redirect'] = DKOFBLOGIN_DENIAL_REDIRECT;
+    }
   } // setup_options()
 
   /**

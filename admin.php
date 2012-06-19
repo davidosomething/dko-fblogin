@@ -122,10 +122,10 @@ class DKOFBLogin_Admin extends DKOFBLogin
       'after' => 'Specify a relative URL to go to if the user rejects authorization of the app. Defaults to debugging error message!'
     ));
     $this->add_settings_textfield($section_slug, 'Login Redirect', array(
-      'after' => 'Specify a relative URL to go to after logging in (e.g., user profile\'s page). Defaults to ' . admin_url('profile.php') . ' when blank.'
+      'after' => 'Specify a relative URL to go to after logging in (e.g., user profile\'s page). Defaults to ' . admin_url('profile.php') . ' when blank. Use %current_page% to stay on the current page (and let your own backend handle redirection).'
     ));
     $this->add_settings_textfield($section_slug, 'Register Redirect', array(
-      'after' => 'Specify a relative URL to go to after logging in as a new facebook user (e.g., a registration page to capture additional data). Defaults to ' . admin_url('profile.php') . ' when blank.'
+      'after' => 'Specify a relative URL to go to after logging in as a new facebook user (e.g., a registration page to capture additional data). Defaults to ' . admin_url('profile.php') . ' when blank. Use %current_page% to stay on the current page (and let your own backend handle redirection).'
     ));
 
     $section_slug = DKOFBLOGIN_SLUG.'_email';
@@ -181,19 +181,21 @@ class DKOFBLogin_Admin extends DKOFBLogin
     }
     echo '<input id="', $field_id, '" type="text" name="', $field_name, '" value="', $field_value, '" size="40"';
     $is_disabled = false;
-    if (
-      ($args['field'] == 'app_id' && defined('DKOFBLOGIN_APP_ID'))
+    if ( ($args['field'] == 'app_id' && defined('DKOFBLOGIN_APP_ID'))
       || ($args['field'] == 'app_secret' && defined('DKOFBLOGIN_APP_SECRET'))
+      || ($args['field'] == 'denial_redirect' && defined('DKOFBLOGIN_DENIAL_REDIRECT'))
+      || ($args['field'] == 'login_redirect' && defined('DKOFBLOGIN_LOGIN_REDIRECT'))
+      || ($args['field'] == 'register_redirect' && defined('DKOFBLOGIN_REGISTER_REDIRECT'))
     ) {
       echo ' disabled="disabled"';
       $is_disabled = true;
     }
     echo ' />';
     if (array_key_exists('after', $args)) {
-      echo '<span class="description">', $args['after'], '</span>';
+      echo ' <span class="description">', $args['after'], '</span>';
     }
     if ($is_disabled) {
-      echo '<span class="description">Overridden: DKOFBLOGIN_' . strtoupper($args['field']) . ' defined in wp-config.</span>';
+      echo ' <strong class="description">Overridden: DKOFBLOGIN_' . strtoupper($args['field']) . ' defined in wp-config.</strong>';
     }
   }
 
