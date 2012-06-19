@@ -421,7 +421,6 @@ class DKOFBLogin extends DKOWPPlugin
    * @param int     $status    HTTP status code to return
    */
   public function redirect($location = '', $default = '', $status = 302) {
-    echo 'supposed to redirect!';
     if ($location) {
       header('location: ' . $location, true, $status); // send 302 Found header
       exit; // just in case
