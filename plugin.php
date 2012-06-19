@@ -46,10 +46,20 @@ class DKOFBLogin extends DKOWPPlugin
 
     add_action('init', array(&$this, 'initialize'));
     add_action('init', array(&$this, 'html_channel_file'));
+    add_action('wp_head', array(&$this, 'save_current_page'));
 
     $this->setup_options();
     $this->check_update();
   } // __construct()
+
+
+  public function save_current_page() {
+    if (!isset($_SESSION)) {
+      session_start();
+    }
+    $_SESSION[DKOFBLOGIN_SLUG . '_current_page'] = $_SERVER['REQUEST_URI'];
+  }
+
 
   /**
    * generate the options if for some reason they don't exist
@@ -421,14 +431,26 @@ class DKOFBLogin extends DKOWPPlugin
    * @param int     $status    HTTP status code to return
    */
   public function redirect($location = '', $default = '', $status = 302) {
-    if ($location) {
-      header('location: ' . $location, true, $status); // send 302 Found header
-      exit; // just in case
+    if (!isset($_SESSION)) {
+      session_start();
     }
+
     // no login location defined, go to user's wordpress admin profile
     if (!$default) {
       $default = admin_url('profile.php');
     }
+
+    if ($location) {
+      if (empty($_SESSION[DKOFBLOGIN_SLUG . '_current_page'])) {
+        $location = home_url();
+      }
+      else {
+        $location = str_replace('%current_page%', $_SESSION[DKOFBLOGIN_SLUG . '_current_page'], $location);
+      }
+      header('location: ' . $location, true, $status); // send 302 Found header
+      exit; // just in case
+    }
+
     header('location: ' . $default, true, $status); // send 302 Found header
     exit; // just in case
   } // redirect()
