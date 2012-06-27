@@ -9,5 +9,5 @@ function dkofblogin_button() {
 
 function dkofblogin_link() {
   global $dkofblogin;
-  echo $dkofblogin->login_link();
+  echo esc_attr($dkofblogin->login_link());
 }
