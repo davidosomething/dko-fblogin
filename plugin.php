@@ -47,12 +47,21 @@ class DKOFBLogin extends DKOWPPlugin
     add_action('init', array(&$this, 'initialize'));
     add_action('init', array(&$this, 'html_channel_file'));
     add_action('wp_head', array(&$this, 'save_current_page'));
+    add_action('dkofblogin_after_fbinit' , array(&$this, 'facebook_logout_caller'));
+
+    // logout stuff
+    add_action('wp_head', array(&$this, 'facebook_logout_script'));
 
     $this->setup_options();
     $this->check_update();
   } // __construct()
 
 
+  /**
+   * save_current_page
+   *
+   * @return void
+   */
   public function save_current_page() {
     if (!isset($_SESSION)) {
       session_start();
@@ -94,6 +103,7 @@ class DKOFBLogin extends DKOWPPlugin
     }
   } // setup_options()
 
+
   /**
    * Check to see if the plugin was updated, do maintenance
    */
@@ -109,6 +119,7 @@ class DKOFBLogin extends DKOWPPlugin
     }
   } // check_update()
 
+
   /**
    * callback for activation_hook
    * also called whenever the plugin is updated
@@ -119,12 +130,14 @@ class DKOFBLogin extends DKOWPPlugin
     flush_rewrite_rules(true);
   } // activate()
 
+
   /**
    * callback for deactivation_hook
    */
   public function deactivate() {
     flush_rewrite_rules(true);
   } // deactivate()
+
 
   /**
    * run during WP initialize - no output plz
@@ -148,6 +161,7 @@ class DKOFBLogin extends DKOWPPlugin
       $this->fb_unlink();
     }
   } // initialize()
+
 
   /**
    * do facebook login
@@ -179,6 +193,35 @@ class DKOFBLogin extends DKOWPPlugin
     }
     return '';
   } // permissions_list()
+
+
+  /**
+   * facebook_logout_caller
+   *
+   * calls getLoginStatus to get a client side access token
+   * the callback then logs the user out
+   *
+   * @return void
+   */
+  public function facebook_logout_caller() {
+    if (array_key_exists('fblogout', $_GET)) {
+      echo "FB.getLoginStatus(dkofbloginLogout);\n";
+    }
+  } // facebook_logout_caller
+
+
+  /**
+   * facebook_logout_script
+   *
+   * add callback function js to head that logs user out of fb
+   *
+   * @return void
+   */
+  public function facebook_logout_script() {
+    if (array_key_exists('fblogout', $_GET)) {
+      ?><script>function dkofbloginLogout(response) { FB.logout(function(response) {}); }</script><?php
+    }
+  } // facebook_logout_script
 
 
   /**
@@ -259,6 +302,7 @@ class DKOFBLogin extends DKOWPPlugin
     exit; // just in case
   } // login_via_fbmeta()
 
+
   /**
    * associate_user_fbmeta
    *
@@ -276,6 +320,7 @@ class DKOFBLogin extends DKOWPPlugin
     $this->redirect($this->options['login_redirect'], admin_url('profile.php'));
     exit; // just in case
   } // associate_user_fbmeta()
+
 
   /**
    * Default callback (priority 10) for dkofblogin_generate_user filter
@@ -307,6 +352,7 @@ class DKOFBLogin extends DKOWPPlugin
     $generated['last_name']   = $this->fb_data->last_name;
     return array_merge($generated, $userdata);
   } // generate_user_from_fbdata()
+
 
   /**
    * register_new_user
@@ -343,6 +389,7 @@ class DKOFBLogin extends DKOWPPlugin
     $this->redirect($this->options['register_redirect'], admin_url('profile.php'));
   } // register_new_user()
 
+
   /**
    * Default callback for dkofblogin_user_registered action
    *
@@ -367,6 +414,7 @@ class DKOFBLogin extends DKOWPPlugin
     );
   } // email_after_register()
 
+
   /**
    * replace_email_tokens
    *
@@ -381,6 +429,7 @@ class DKOFBLogin extends DKOWPPlugin
     $replace  = array(home_url(),     get_bloginfo('name'), $userdata['first_name'],  $userdata['last_name'], $userdata['user_login'],  $userdata['user_pass'], $userdata['user_email']);
     return str_replace($search, $replace, $message);
   } // replace_email_tokens()
+
 
   /**
    * by using the update_user_meta we ensure only one FB acct per WP user
@@ -397,6 +446,7 @@ class DKOFBLogin extends DKOWPPlugin
     update_user_meta($user_id, DKOFBLOGIN_USERMETA_KEY_FBID, $fbid);
     update_user_meta($user_id, DKOFBLOGIN_USERMETA_KEY_TOKEN, $access_token);
   } // setfbmeta()
+
 
   /**
    * log a user in to wordpress only if a subscriber
@@ -423,6 +473,7 @@ class DKOFBLogin extends DKOWPPlugin
     wp_set_auth_cookie($user_id, true);
     do_action('wp_login', $this->current_user_data->user_login, $this->current_user_data);
   } // login()
+
 
   /**
    * redirect to $location or $default with $status
@@ -455,6 +506,7 @@ class DKOFBLogin extends DKOWPPlugin
     exit; // just in case
   } // redirect()
 
+
   /**
    * If already have a user, don't bother with this hook.
    * Gets a WordPress user based on provided facebook id.
@@ -478,6 +530,7 @@ class DKOFBLogin extends DKOWPPlugin
     return false;
   } // get_user_by_fbdata()
 
+
   /**
    * If already have a user, don't bother with this hook.
    *
@@ -490,6 +543,7 @@ class DKOFBLogin extends DKOWPPlugin
     }
     return get_user_by('email', $this->fb_data->email);
   }
+
 
   /**
    * Callback for DKOFBLOGIN_SLUG.'_generate_username' filter.
