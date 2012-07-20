@@ -63,9 +63,7 @@ class DKOFBLogin extends DKOWPPlugin
    * @return void
    */
   public function save_current_page() {
-    if (!isset($_SESSION)) {
-      session_start();
-    }
+    @session_start();
     $_SESSION[DKOFBLOGIN_SLUG . '_current_page'] = $_SERVER['REQUEST_URI'];
   }
 
@@ -150,9 +148,7 @@ class DKOFBLogin extends DKOWPPlugin
 
     add_shortcode('dkofblogin-button',   array(&$this, 'html_shortcode_login_button'));
 
-    if (!isset($_SESSION)) {
-      session_start();
-    }
+    @session_start();
     // @TODO check_nonce
     if (!empty($_REQUEST[DKOFBLOGIN_SLUG.'_link'])) {
       $this->fb_link();
@@ -482,9 +478,7 @@ class DKOFBLogin extends DKOWPPlugin
    * @param int     $status    HTTP status code to return
    */
   public function redirect($location = '', $default = '', $status = 302) {
-    if (!isset($_SESSION)) {
-      session_start();
-    }
+    @session_start();
 
     // no login location defined, go to user's wordpress admin profile
     if (!$default) {
