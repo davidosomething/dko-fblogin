@@ -26,8 +26,14 @@ if (array_key_exists('error', $_REQUEST)) {
   echo '<p>', urldecode(filter_var($_REQUEST['error_description'], FILTER_SANITIZE_STRING)), '</p>';
   $is_invalid_request = true;
 }
-elseif (empty($_REQUEST['state']) || empty($_SESSION[DKOFBLOGIN_SLUG.'_state'])) {
-  echo '<h1>Error: Missing state</h1>';
+
+elseif (empty($_SESSION[DKOFBLOGIN_SLUG.'_state'])) {
+  echo '<h1>Error: Missing state in session</h1>';
+  $is_invalid_request = true;
+}
+
+elseif (empty($_REQUEST['state'])) {
+  echo '<h1>Error: Missing state in request</h1>';
   $is_invalid_request = true;
 }
 elseif ($_REQUEST['state'] != $_SESSION[DKOFBLOGIN_SLUG.'_state']) {
