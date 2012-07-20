@@ -64,7 +64,7 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
    */
   public function login_link($redirect_uri = DKOFBLOGIN_ENDPOINT_URL) {
     @session_start();
-    if (empty($_REQUEST['state'])) {
+    if (empty($_SESSION[DKOFBLOGIN_SLUG.'_state'])) {
       $_SESSION[DKOFBLOGIN_SLUG.'_state'] = md5(uniqid(rand(), TRUE)); //CSRF protection
     }
 
