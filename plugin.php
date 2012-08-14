@@ -491,6 +491,7 @@ class DKOFBLogin extends DKOWPPlugin
       }
       else {
         $location = str_replace('%current_page%', $_SESSION[DKOFBLOGIN_SLUG . '_current_page'], $location);
+        $location = str_replace('?fblogout=1', '?xfblogout=1', $location); // don't logout!
       }
       header('location: ' . $location, true, $status); // send 302 Found header
       exit; // just in case
