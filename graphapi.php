@@ -29,6 +29,13 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
     $this->app_id     = $app_id;
     $this->app_secret = $app_secret;
 
+    if (session_id() == '') {
+      session_start();
+    }
+    if (empty($_REQUEST['code'])) {
+      $_SESSION[DKOFBLOGIN_SLUG.'_state'] = md5(uniqid(rand(), TRUE)); //CSRF protection
+    }
+
     add_filter('dkowppplugin_api_after_request', array(&$this, 'make_certified_request'), 10, 3);
   } // __construct
 
@@ -63,13 +70,6 @@ class DKOFBLogin_Graph_API extends DKOWPPlugin_API
    * @return string link to login via facebook
    */
   public function login_link($redirect_uri = DKOFBLOGIN_ENDPOINT_URL) {
-    if (session_id() == '') {
-      session_start();
-    }
-    if (empty($_REQUEST['code'])) {
-      $_SESSION[DKOFBLOGIN_SLUG.'_state'] = md5(uniqid(rand(), TRUE)); //CSRF protection
-    }
-
     $options = get_option(DKOFBLOGIN_OPTIONS_KEY);
     $link_query = array(
       'client_id'     => $this->app_id,
