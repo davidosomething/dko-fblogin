@@ -5,7 +5,7 @@
  */
 
 /* private function fb_link() { */
-@session_start();
+if (session_id() == '') session_start();
 if (isset($_GET['debug'])) {
   echo '<pre>';
   var_dump($_SESSION);
