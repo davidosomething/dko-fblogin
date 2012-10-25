@@ -5,10 +5,8 @@
  */
 
 /* private function fb_link() { */
-if (session_id() == '') session_start();
-if (isset($_GET['debug'])) {
-  echo '<pre>';
-  var_dump($_SESSION);
+if (session_id() == '') {
+  session_start();
 }
 
 /* ==|== no haxors ========================================================== */
@@ -36,7 +34,6 @@ elseif (empty($_SESSION[DKOFBLOGIN_SLUG.'_state'])) {
   echo '<h1>Error: Missing state in session</h1>';
   $is_invalid_request = true;
 }
-
 elseif (empty($_REQUEST['state'])) {
   echo '<h1>Error: Missing state in request</h1>';
   $is_invalid_request = true;
@@ -48,6 +45,12 @@ elseif ($_REQUEST['state'] != $_SESSION[DKOFBLOGIN_SLUG.'_state']) {
 
 if ($is_invalid_request) {
   echo '<p><a href="', $this->graphapi->login_link(), '">Click here to try again, accept the terms this time!</a></p>';
+
+  if (isset($_GET['debug'])) {
+    echo '<pre>';
+    var_dump($_SESSION);
+  }
+
   exit;
 }
 

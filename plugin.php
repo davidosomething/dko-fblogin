@@ -63,7 +63,9 @@ class DKOFBLogin extends DKOWPPlugin
    * @return void
    */
   public function save_current_page() {
-    @session_start();
+    if (session_id() == '') {
+      session_start();
+    }
     $_SESSION[DKOFBLOGIN_SLUG . '_current_page'] = $_SERVER['REQUEST_URI'];
   }
 
